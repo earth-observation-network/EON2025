@@ -1,0 +1,15 @@
+{
+  "hash": "3502f2b1e75cc6ba690310fe54e2858c",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Tree detection\"\nformat: html\nknitr:\n  opts_chunk: \n    eval: false\neditor: visual\n---\n\n\n\n\n## Tree detection\n\nGoal is to detect tree tops using a variable window size and using the ndom raster in the BI plots in Solling 2023.\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(lidR)\nlibrary(terra)\nlibrary(here)\n```\n:::\n\n\n\n\nLoad ndom previously clipped to BI plots in Solling (BI 2023)\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nndom_bi <- rast(here(\"R_session\", \"data\", \"ndom_bi_plots_solling_2023.tif\"))\nmapview(ndom_bi)\n```\n:::\n\n\n\n\nMake tiles because data too big for R\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\ntiles <- makeTiles(x=ndom_bi, \n          y=c(3000,3000),\n          filename=\n            here(\"R_session\", \"output\",\"tiles\",\"ndom_bi_.tif\"), \n          na.rm=TRUE)\n\n# In case the tiles are already there\ntiles <-list.files(here(\"R_session\", \"output\",\"tiles\"), pattern='*\\\\.tif', recursive=TRUE, full.names=TRUE)\n```\n:::\n\n\n\n\nTree detection function with variable window size. Any points below 2 m will equate to a window size of 3 m, while points above 20 meters equate to a window size of 5 m. Anything between 2 and 20 meter will have a non-linear relationship.\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nf <- function(x) {\n  y <- 2.6 * (-(exp(-0.08*(x-2)) - 1)) + 3 \n  # from https://r-lidar.github.io/lidRbook/itd.html\n  y[x < 2] <- 3\n  y[x > 20] <- 5\n  return(y)\n}\n\nheights <- seq(-5,30,0.5)\nws <- f(heights)\nplot(heights, ws, type = \"l\",  ylim = c(0,5))\n```\n:::\n\n\n\n\nTree detection using function for variable window size\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nout <- sapply(tiles, \\(tile) {\n        x <- rast(tile)\n        ttops <- lidR::locate_trees(x, lidR::lmf(f))\n        vect(ttops)\n    })\n\nout <- vect(out)\n```\n:::\n\n\n\n\nSave tree tops\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nwriteVector(out, here(\"R_session\", \"output\",\"ttops_ndom_.gpkg\"), overwrite=TRUE)\n```\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

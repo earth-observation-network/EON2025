@@ -1,0 +1,94 @@
+---
+title: "Number_Trees_BI_nDOM"
+format: html
+knitr:
+  opts_chunk: 
+    eval: false
+editor: visual
+---
+
+## Compare number of trees in BI plots: detected with remote sensing vs measured in field
+
+```{r}
+library(here)
+library(sf)
+library(dplyr)
+library(terra)
+library(ggplot2)
+library(foreign)
+```
+
+Load BI plots, BI trees and trees detected in ndom (created in previous script).
+
+```{r}
+plots_bi <- st_read(here("R_session", "data", "buffer13_bi_mittelpunkt_solling_2023.gpkg"))
+
+trees_bi <- st_read(here("R_session", "data", "bi_baeume_vorrat_solling_2023.gpkg"))
+
+trees_ndom <- st_read(here("R_session", "data", "ttops_bi_ndom.gpkg"))
+```
+
+Load table with median slope in the BI plot and bind with plots BI table
+
+```{r}
+slope_bi_plot <- read.dbf(here("R_session", "data", "bi_plot_median_slope.dbf"))
+plots_bi <- bind_cols(plots_bi, slope_bi_plot %>% select(X_median))
+rm(slope_bi_plot)
+```
+
+Count how many bi trees inside plot
+
+```{r}
+intersection_bi_trees_plots <- st_intersection(x = plots_bi, y = trees_bi)
+
+count_bi_trees_plot <- intersection_bi_trees_plots %>% 
+    add_count(KSPNR, name = "n_trees_bi") %>% 
+    group_by(KSPNR) %>% 
+    slice(n()) %>% 
+    ungroup() 
+```
+
+Optional: Trees_bi 2638 observations, intersection_bi_trees_plots 2606 observations, check reason from this difference
+
+```{r}
+#st_erase = function(x, y) st_difference(x, st_union(st_combine(y)))
+
+#difference <- st_erase(trees_bi , intersection_bi_trees_plots)
+
+#writeVector(vect(difference), here("output", "trees_not_bi.gpkg"), overwrite=TRUE)
+```
+
+Count how many ndom trees inside plot
+
+```{r}
+intersection_ndom_trees_plots <- st_intersection(x = plots_bi, y = trees_ndom)
+
+count_ndom_trees_plot <- intersection_ndom_trees_plots %>% 
+    add_count(KSPNR, name = "n_trees_ndom") %>% 
+    group_by(KSPNR) %>% 
+    slice(n()) %>% 
+    ungroup() 
+```
+
+Merge table with number trees from ndom and table with number trees from BI
+
+```{r}
+count_trees_bi_ndom <- merge(as.data.frame(count_ndom_trees_plot), as.data.frame(count_bi_trees_plot), by = "KSPNR")
+```
+
+Plot to compare the number of trees in each plot taking slope of plot into account
+
+```{r}
+x <- ggplot(count_trees_bi_ndom, aes(x=n_trees_bi, y=n_trees_ndom,        colour=X_median.x)) + 
+              xlim(0,30) + ylim(0,30) +
+              geom_abline(slope=1) +
+              geom_point() +
+              scale_colour_gradientn(colours=rainbow(4)) +
+              labs(title = "Number of trees in each plot measured in BI vs detected with nDOM", 
+              x = "Number of trees measured in BI",
+              y = "Number of trees detected in nDOM",
+              color = "Terrain slope [degree]") +
+              theme(plot.title = element_text(hjust = 0.5))
+```
+
+What could be the reasons for the difference?

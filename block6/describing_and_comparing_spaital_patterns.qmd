@@ -1,0 +1,27 @@
+---
+title: Describing and comparing spatial patterns
+---
+
+## Slides
+
+The workshop slides are at <https://jakubnowosad.com/eon2024/>.
+
+## Prerequisites
+
+Participants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.
+
+- R: <https://cloud.r-project.org/>
+- RStudio: <https://posit.co/download/rstudio-desktop/#download>
+
+```r
+install.packages("remotes")
+pkg_list = c("terra", "sf", "landscapemetrics", "motif", "tidyr", "dplyr")
+remotes::install_cran(pkg_list)
+```
+
+## Exercises
+
+The slides are accompanied by practical exercises.
+The best way to get them is to download the exercises repository as a ZIP file from <https://github.com/Nowosad/eon2024-exercises/archive/refs/heads/main.zip> and unpack it on your computer.
+Then, you can open the `.Rproj` file and start working on the exercises in RStudio.
+
