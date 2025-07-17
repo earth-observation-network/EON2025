@@ -21,7 +21,7 @@ comments: false
 </style>
 ```
 
-# Welcome EON Summer School 2024 (01-06.09.2024)
+# Welcome EON Summer School 2025 (31.08-05.09.2025)
 
 # Workshop Program
 
@@ -38,7 +38,7 @@ comments: false
 -   Tuesday (Waldhaus & Excursion):
     -   09:00-13:00h **Excursion with NP-Harz** to visit some mire and discuss topics of water retention (Thomas Glinka, NP-Harz)
     -   13:30 Lunch @ Waldhaus
-    -   14:00-16:00 **Block 2 Current topics of remote sensing assisted forest inventories in the context of forest management planning** (Andrea Plazas, NFP-Niedersachen) 
+    -   14:00-16:00 **Block 2 Current topics of remote sensing assisted forest inventories in the context of forest management planning** (N.N.) 
     -   16:00-18:00 Group work
       
 -   Wednesday (Waldhaus & Excursion):
@@ -108,7 +108,8 @@ You can download the geopackage with the AOI [here](https://cloud.hawk.de/index.
 
 -   HAWK:
     -   Mavic 3 (Enterprise + Thermal + Multispectral)
-    -   GNSS (Emlid, Alberding, Garmin)
+    -   Matrics RTK350 incl. L1, P1 & Micasence 
+    -   GNSS (Emlid, Garmin)
     -   Tablets (Android)
     -   Forest Measurement Devices (diameter tapes, calipers, vertex, laser range finders, ...)
     -   GeoSlam Mobile Laser Scanner
