@@ -3,28 +3,23 @@ project:
   output-dir: docs/
   render:
   - "*.qmd"
+
 execute:
-  freeze: true  
+  freeze: true
+
 website:
   open-graph: true
   page-navigation: true  
-  title: "EON Summer School 2024"
-  site-url: https://earth-observation-network.github.io/EON2024
-  repo-url: https://github.com/earth-observation-network/EON2024
+  title: "EON Summer School 2025"
+  site-url: https://earth-observation-network.github.io/EON2025
+  repo-url: https://github.com/earth-observation-network/EON2025
   repo-actions: [edit, issue]
   search: 
     location: navbar
     type: textbox
-  page-footer: "Earth Observation Network Harz Summer School (2024)" 
-  twitter-card:
-    creator: "@gisma"
-  # comments:
-  #   utterances:
-  #     repo: yourgithubname/yourreponame
+  page-footer: "Earth Observation Network Harz Summer School (2025)" 
   navbar:
     logo: /images/logooil.jpg
-
-
   sidebar:
     # logo: /images/logo.jpg
     pinned: true
@@ -63,7 +58,7 @@ website:
       - section: "Block 6: Describing and comparing spatial patterns"
         contents:
           - block6/describing_and_comparing_spaital_patterns.qmd
-##format: dokuwiki
+
 format:
   html:
     theme:
@@ -76,6 +71,3 @@ format:
     link-external-icon: true
     link-external-newwindow: true
     link-external-filter: '^(?:http:|https:)\/\/www\.quarto\.org\/custom'
-# filters:
-#   - include-files.lua
-#   - quarto

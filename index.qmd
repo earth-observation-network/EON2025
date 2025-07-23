@@ -3,10 +3,6 @@ title: ""
 open-graph:
   description: "EON Summer School 2024 (01-06.09.2024)"
   image: /images/clausiwood.png
-twitter-card:
-  description: "EON Summer School 2024 (01-06.09.2024)"
-  image: /images/clausiwood.png
-
 comments: false
 ---
 
@@ -102,7 +98,6 @@ This forest area was dominate by spruce trees which all died in the last years.
 ![](/images/aoi.png)
 
 You can download the geopackage with the AOI [here](https://cloud.hawk.de/index.php/s/yomQwefzLDwyTa6):
-
 
 ## Sensors & Equipment
 
