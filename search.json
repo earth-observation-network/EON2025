@@ -13,45 +13,45 @@
   {
     "objectID": "block6/index.html",
     "href": "block6/index.html",
-    "title": "EON Summer School 2025",
+    "title": "Materials",
     "section": "",
-    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.",
+    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.\n\n\n\nParticipants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)\n\n\n\nThe slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
     "crumbs": [
       "Block 6: Understanding spatial patterns: how to measure and compare them",
-      "Slides"
+      "Materials"
     ]
   },
   {
     "objectID": "block6/index.html#slides",
     "href": "block6/index.html#slides",
-    "title": "EON Summer School 2025",
+    "title": "Materials",
     "section": "",
     "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.",
     "crumbs": [
       "Block 6: Understanding spatial patterns: how to measure and compare them",
-      "Slides"
+      "Materials"
     ]
   },
   {
     "objectID": "block6/index.html#prerequisites",
     "href": "block6/index.html#prerequisites",
-    "title": "EON Summer School 2025",
-    "section": "Prerequisites",
-    "text": "Prerequisites\nParticipants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)",
+    "title": "Materials",
+    "section": "",
+    "text": "Participants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)",
     "crumbs": [
       "Block 6: Understanding spatial patterns: how to measure and compare them",
-      "Slides"
+      "Materials"
     ]
   },
   {
     "objectID": "block6/index.html#exercises",
     "href": "block6/index.html#exercises",
-    "title": "EON Summer School 2025",
-    "section": "Exercises",
-    "text": "Exercises\nThe slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
+    "title": "Materials",
+    "section": "",
+    "text": "The slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
     "crumbs": [
       "Block 6: Understanding spatial patterns: how to measure and compare them",
-      "Slides"
+      "Materials"
     ]
   }
 ]
