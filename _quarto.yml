@@ -57,7 +57,7 @@ website:
       - text: "---"
       - section: "Block 6: Understanding spatial patterns: how to measure and compare them"
         contents:
-          - block6/describing_and_comparing_spaital_patterns.qmd
+          - block6/index.qmd
 
 format:
   html:
