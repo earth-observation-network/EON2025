@@ -1,3 +1,5 @@
+# Materials
+
 ## Slides
 
 The workshop slides are at <https://jakubnowosad.com/eon2025/>.
