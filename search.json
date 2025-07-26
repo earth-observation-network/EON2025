@@ -9,5 +9,49 @@
       "Welcome",
       "Welcome EON Summer School 2025 (31.08-05.09.2025)"
     ]
+  },
+  {
+    "objectID": "block6/index.html",
+    "href": "block6/index.html",
+    "title": "Understanding spatial patterns: how to measure and compare them",
+    "section": "",
+    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.",
+    "crumbs": [
+      "Block 6: Understanding spatial patterns: how to measure and compare them",
+      "Understanding spatial patterns: how to measure and compare them"
+    ]
+  },
+  {
+    "objectID": "block6/index.html#slides",
+    "href": "block6/index.html#slides",
+    "title": "Understanding spatial patterns: how to measure and compare them",
+    "section": "",
+    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.",
+    "crumbs": [
+      "Block 6: Understanding spatial patterns: how to measure and compare them",
+      "Understanding spatial patterns: how to measure and compare them"
+    ]
+  },
+  {
+    "objectID": "block6/index.html#prerequisites",
+    "href": "block6/index.html#prerequisites",
+    "title": "Understanding spatial patterns: how to measure and compare them",
+    "section": "Prerequisites",
+    "text": "Prerequisites\nParticipants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)",
+    "crumbs": [
+      "Block 6: Understanding spatial patterns: how to measure and compare them",
+      "Understanding spatial patterns: how to measure and compare them"
+    ]
+  },
+  {
+    "objectID": "block6/index.html#exercises",
+    "href": "block6/index.html#exercises",
+    "title": "Understanding spatial patterns: how to measure and compare them",
+    "section": "Exercises",
+    "text": "Exercises\nThe slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
+    "crumbs": [
+      "Block 6: Understanding spatial patterns: how to measure and compare them",
+      "Understanding spatial patterns: how to measure and compare them"
+    ]
   }
 ]
