@@ -1,7 +1,3 @@
----
-title: "Understanding spatial patterns: how to measure and compare them"
----
-
 ## Slides
 
 The workshop slides are at <https://jakubnowosad.com/eon2025/>.
