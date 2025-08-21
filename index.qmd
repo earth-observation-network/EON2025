@@ -32,9 +32,9 @@ comments: false
     -    16:30-18:00 Group work
       
 -   Tuesday (Waldhaus & Excursion):
-    -   09:00-13:00h **Excursion with NP-Harz** to visit some mire and discuss topics of water retention (Thomas Glinka, NP-Harz)
+    -   09:00-13:00h **Excursion to NP-Harz** to visit some mire
     -   13:30 Lunch @ Waldhaus
-    -   14:00-16:00 **Block 2 Current topics of remote sensing assisted forest inventories in the context of forest management planning** (N.N.) 
+    -   14:00-16:00 **Block 2 Processing of 3D LiDAR data to assess forest structure ** (Svenja Dobelmann & Prakash Basnet, HAWK) 
     -   16:00-18:00 Group work
       
 -   Wednesday (Waldhaus & Excursion):
