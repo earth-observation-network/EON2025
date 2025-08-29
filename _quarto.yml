@@ -49,13 +49,13 @@ website:
           # - href: https://gisma-courses.github.io/LV-uav-workflow/modules/module-fieldwork/
           #   text: uav/Flight Planning
       - text: "---"
-      - section: "Block 4 and 5: Microclimate Data Retrieval & Spatial Data Interpolation"
+      - section: "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation"
         contents:
           - mc_session/mc1.qmd
           - mc_session/mc3.qmd
           - mc_session/mc4.qmd
       - text: "---"
-      - section: "Block 6: Understanding spatial patterns: how to measure and compare them"
+      - section: "Block 5: Understanding spatial patterns: how to measure and compare them"
         contents:
           - block6/index.qmd
 
