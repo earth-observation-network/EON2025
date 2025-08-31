@@ -15,7 +15,7 @@
     "href": "block1_magdon/02_ValidationDataCollection.html",
     "title": "Collection of validation data in the context of remote sensing based forest monitoring",
     "section": "",
-    "text": "rm(list=ls())\nlibrary(sf)\n\nLinking to GEOS 3.10.2, GDAL 3.4.1, PROJ 7.2.1; sf_use_s2() is TRUE\n\nlibrary(terra)\n\nterra 1.7.23\n\nlibrary(ggplot2)\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\nwd=paste0(find_rstudio_root_file(),\"/tdv_session/data/\")",
+    "text": "rm(list=ls())\nlibrary(sf)\n\nLinking to GEOS 3.10.2, GDAL 3.4.1, PROJ 7.2.1; sf_use_s2() is TRUE\n\nlibrary(terra)\n\nterra 1.7.23\n\nlibrary(ggplot2)\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\ndata_dir=paste0(find_rstudio_root_file(),\"/block1_magdon/data/\")",
     "crumbs": [
       "Block 1: Reference Data Collection",
       "Collection of validation data in the context of remote sensing based forest monitoring"
