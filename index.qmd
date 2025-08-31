@@ -59,7 +59,7 @@ comments: false
 
 ------------------------------------------------------------------------
 
-# Accomondation
+# Accommodation
 
 -   We will stay at: [The Cabin Oderbrück](https://oderbrueck.de/uebernachten-2/the-cabin-oderbrueck)
 -   Costs: approx. 25€/Person/night, will be collect in cash
