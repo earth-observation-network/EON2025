@@ -14,7 +14,8 @@ library(terra)
 library(ggplot2)
 library(rprojroot)
 library(patchwork)
-wd=paste0(find_rstudio_root_file(),"/tdv_session/data/")
+
+data_dir=paste0(find_rstudio_root_file(),"/block1_magdon/data/")
 
 ```
 
@@ -38,16 +39,22 @@ error free representation of the population. Additionally we use a second map
 (agb_model) compiled using a machine learning model (RF) also depicting the AGB 
 distribution. 
 
+Before we can start you may download the following files:
+
+1. [AGB_pop](https://cloud.hawk.de/index.php/s/BBHMksRC3bjc2WD)
+2. [AGB_model](https://cloud.hawk.de/index.php/s/fJzigXwzbHRLNdy)
+3. [National park boundary](https://cloud.hawk.de/index.php/s/2G4XCatn87S8FsX)
+
+Place all files into the sub folder 'data' of this tutorial. 
+
 ```{r import}
-# create a string containing the current working directory
-wd=paste0(find_rstudio_root_file(),"/block1_magdon/data/")
 
 #Import the boundary of the national park
-np_boundary = st_transform(st_read(paste0(wd,"nlp-harz_aussengrenze.gpkg")),25832)
+np_boundary = st_transform(st_read(paste0(data_dir,"nlp-harz_aussengrenze.gpkg")),25832)
 
-agb_pop <- terra::rast(paste0(wd,"agb_np_harz_truth.tif"))
+agb_pop <- terra::rast(paste0(data_dir,"agb_np_harz_truth.tif"))
 
-agb_model <-terra::rast(paste0(wd,"agb_np_harz_model.tif"))
+agb_model <-terra::rast(paste0(data_dir,"agb_np_harz_model.tif"))
 
 ```
 
@@ -96,13 +103,13 @@ But is this an unbiased estimate?
 To check if our sample based estimates are unbiased we will repeat the sampling
 $k$ times. 
 
-```{r simulation}
+```{r simulation, echo=FALSE}
 dif <- agb_pop-agb_model
 seed<- 12324
 names(dif)<-'dif'
 
 
-k <- 500
+k <- 100
 n <- 50
 RMSE <- rep(0,k) 
 
@@ -120,7 +127,7 @@ ggplot(data=df,aes(x=x))+
                fill='blue', alpha=0.5)+
   xlab('RMSE (t/ha)')+geom_vline(xintercept=RMSE_pop,linewidth=1.5,
                           color ='black', linetype='longdash')+
-  geom_vline(xintercept=mean(df$x),size=1.5,
+  geom_vline(xintercept=mean(df$x),linewidth=1.5,
                           color ='black')
 
 ```
@@ -129,8 +136,8 @@ Thus, we can assume an unbiased estimate of the RMSE.
 
 But how does the sample size $n$ affects the accuracy?
 
-```{r Simulation2}
-k <- 500
+```{r Simulation2, echo=FALSE}
+k <- 100
 n <- 100
 RMSE_2 <- rep(0,k) 
 
@@ -147,14 +154,14 @@ df<-rbind(df,df_2)
 ggplot(data=df,aes(x=x,fill=y))+
   geom_density(alpha=0.5)+
   scale_fill_discrete(labels=c('Random, n=50', 'Random, n=100'))+
-  xlab('RMSE (t/ha)')+geom_vline(xintercept=RMSE_pop,size=1.5,
+  xlab('RMSE (t/ha)')+geom_vline(xintercept=RMSE_pop,linewidth=1.5,
                           color ='black', linetype='longdash')+
-  geom_vline(xintercept=mean(df$x),size=1.5,
+  geom_vline(xintercept=mean(df$x),linewidth=1.5,
                           color ='black')
 
 ```
 
-We see that the precision of the esimtates is increased. How much did the
+We see that the precision of the estimates is increased. How much did the
 uncertainty decrease when we increase the sample size from $n=50$ 
 to $n=100$?
 
@@ -181,7 +188,7 @@ ggplot()+geom_sf(data=np_boundary,fill=NA)+
 
 
 ```{r SystematicSimlation}
-k <- 500
+k <- 100
 n <- 100
 RMSE_3 <- rep(0,k) 
 
@@ -198,9 +205,9 @@ df<-rbind(df,df_3)
 ggplot(data=df,aes(x=x, fill=y))+
   geom_density(alpha=0.5)+
   scale_fill_discrete(labels=c('Random, n=50', 'Random, n=100','Systematic, n=100'))+
-  xlab('RMSE (t/ha)')+geom_vline(xintercept=RMSE_pop,size=1.5,
+  xlab('RMSE (t/ha)')+geom_vline(xintercept=RMSE_pop,linewidth=1.5,
                           color ='black', linetype='longdash')+
-  geom_vline(xintercept=mean(df$x),size=1.5,
+  geom_vline(xintercept=mean(df$x),linewidth=1.5,
                        color ='black')
 
 ```
