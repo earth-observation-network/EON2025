@@ -139,7 +139,7 @@ window.Quarto = {
 </script>
 
 <link rel="stylesheet" href="../css/styles.css">
-<meta property="og:title" content="Collection of validation data in the context of remote sensing based forest monitoring – EON Summer School 2025">
+<meta property="og:title" content="Validation of continuous maps using design-based sampling methods – EON Summer School 2025">
 <meta property="og:description" content="Tutorial for the EON Summer School 2025">
 <meta property="og:image" content="https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection_files/figure-html/RMSEest-1.png">
 <meta property="og:site_name" content="EON Summer School 2025">
@@ -334,7 +334,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../block1_magdon/01_TrainingDataCollection.html">Block 1: Reference Data Collection</a></li><li class="breadcrumb-item"><a href="../block1_magdon/02_ValidationDataCollection.html">Collection of validation data in the context of remote sensing based forest monitoring</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../block1_magdon/01_TrainingDataCollection.html">Block 1: Reference Data Collection</a></li><li class="breadcrumb-item"><a href="../block1_magdon/02_ValidationDataCollection.html">Validation of continuous maps using design-based sampling methods</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -376,13 +376,13 @@ window.Quarto = {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../block1_magdon/01_TrainingDataCollection.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Collection of training data for remote sensing model building</span></a>
+ <span class="menu-text">Collection of training data for remote sensing modelling based on spectral variability</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../block1_magdon/02_ValidationDataCollection.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Collection of validation data in the context of remote sensing based forest monitoring</span></a>
+ <span class="menu-text">Validation of continuous maps using design-based sampling methods</span></a>
   </div>
 </li>
       </ul>
@@ -490,7 +490,7 @@ window.Quarto = {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../block1_magdon/01_TrainingDataCollection.html">Block 1: Reference Data Collection</a></li><li class="breadcrumb-item"><a href="../block1_magdon/02_ValidationDataCollection.html">Collection of validation data in the context of remote sensing based forest monitoring</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../block1_magdon/01_TrainingDataCollection.html">Block 1: Reference Data Collection</a></li><li class="breadcrumb-item"><a href="../block1_magdon/02_ValidationDataCollection.html">Validation of continuous maps using design-based sampling methods</a></li></ol></nav>
 <div class="quarto-title">
 <h1 class="title">Collection of validation data in the context of remote sensing based forest monitoring</h1>
 <p class="subtitle lead">Tutorial for the EON Summer School 2025</p>
@@ -526,11 +526,11 @@ window.Quarto = {
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(<span class="at">list=</span><span class="fu">ls</span>())</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Linking to GEOS 3.10.2, GDAL 3.4.1, PROJ 7.2.1; sf_use_s2() is TRUE</code></pre>
+<pre><code>Linking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(terra)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>terra 1.7.23</code></pre>
+<pre><code>terra 1.8.60</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rprojroot)</span>
@@ -571,7 +571,7 @@ Attache Paket: 'patchwork'</code></pre>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>np_boundary <span class="ot">=</span> <span class="fu">st_transform</span>(<span class="fu">st_read</span>(<span class="fu">paste0</span>(data_dir,<span class="st">"nlp-harz_aussengrenze.gpkg"</span>)),<span class="dv">25832</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `nlp-harz_aussengrenze' from data source 
-  `F:\EON2025\block1_magdon\data\nlp-harz_aussengrenze.gpkg' 
+  `D:\EON2025\block1_magdon\data\nlp-harz_aussengrenze.gpkg' 
   using driver `GPKG'
 Simple feature collection with 1 feature and 3 fields
 Geometry type: MULTIPOLYGON
@@ -615,7 +615,7 @@ RMSE = \sqrt{\frac{1}{N}\sum{(z(x_{})-\hat{z}(x_{i}))^2}}
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(sample)<span class="ot">&lt;-</span><span class="fu">c</span>(<span class="st">'ID'</span>,<span class="st">'Diff'</span>)</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>RMSE_est <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((sample<span class="sc">$</span>Diff)<span class="sc">^</span><span class="dv">2</span>,<span class="at">na.rm=</span>T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The random sample estimates the RMSE as 40.98.</p>
+<p>The random sample estimates the RMSE as 37.91.</p>
 <p>But is this an unbiased estimate?</p>
 </section>
 <section id="simulation-of-many-random-samples" class="level1">
@@ -849,7 +849,7 @@ RMSE = \sqrt{\frac{1}{N}\sum{(z(x_{})-\hat{z}(x_{i}))^2}}
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sd</span>(RMSE_2)<span class="sc">/</span><span class="fu">sd</span>(RMSE)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.6458648</code></pre>
+<pre><code>[1] 0.8971176</code></pre>
 </div>
 </div>
 </section>
@@ -1060,11 +1060,11 @@ RMSE = \sqrt{\frac{1}{N}\sum{(z(x_{})-\hat{z}(x_{i}))^2}}
 <div class="cell">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>RMSE_sample <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>((validation<span class="sc">$</span>observed<span class="sc">-</span>validation<span class="sc">$</span>predicted)<span class="sc">^</span><span class="dv">2</span>)<span class="sc">/</span><span class="fu">nrow</span>(validation))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The sample RMSE is 40.2* t/ha. To better compare the values between different target variables and models is can also express as a proportion relative to the mean value of the predictions.</p>
+<p>The sample RMSE is 38.89* t/ha. To better compare the values between different target variables and models is can also express as a proportion relative to the mean value of the predictions.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>rRMSE <span class="ot">=</span> RMSE_sample<span class="sc">/</span><span class="fu">mean</span>(validation<span class="sc">$</span>predicted)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>On average we expect that the AGB estimate of our model has an error of 24.3 %.</p>
+<p>On average we expect that the AGB estimate of our model has an error of 24.1 %.</p>
 </section>
 <section id="error-distribution" class="level3">
 <h3 class="anchored" data-anchor-id="error-distribution">Error distribution</h3>
@@ -1098,31 +1098,32 @@ RMSE = \sqrt{\frac{1}{N}\sum{(z(x_{})-\hat{z}(x_{i}))^2}}
 <span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept=</span><span class="fu">mean</span>(validation<span class="sc">$</span>resid),<span class="at">color=</span><span class="st">'red'</span>)</span>
 <span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a>p1<span class="sc">+</span>p2<span class="sc">+</span>p3<span class="sc">+</span><span class="fu">plot_layout</span>(<span class="at">ncol=</span><span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 3 rows containing non-finite outside the scale range
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
 (`stat_summary()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Computation failed in `stat_summary()`.
+Caused by error in `fun.data()`:
+! The package "Hmisc" is required.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 3 rows containing non-finite outside the scale range
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
 (`stat_smooth()`).</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 3 rows containing missing values or values outside the scale range
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
 (`geom_point()`).</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 98 rows containing missing values or values outside the scale range
-(`geom_segment()`).</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 22 rows containing missing values or values outside the scale range
+<pre><code>Warning: Removed 18 rows containing missing values or values outside the scale range
 (`geom_point()`).</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.
-i Please use `after_stat(density)` instead.</code></pre>
+ℹ Please use `after_stat(density)` instead.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Removed 2 rows containing missing values or values outside the scale range
@@ -1564,8 +1565,8 @@ i Please use `after_stat(density)` instead.</code></pre>
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../block1_magdon/01_TrainingDataCollection.html" class="pagination-link" aria-label="Collection of training data for remote sensing model building">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Collection of training data for remote sensing model building</span>
+      <a href="../block1_magdon/01_TrainingDataCollection.html" class="pagination-link" aria-label="Collection of training data for remote sensing modelling based on spectral variability">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Collection of training data for remote sensing modelling based on spectral variability</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
