@@ -1,6 +1,5 @@
 ---
-title: "Collection of validation data in the context of remote sensing based 
-        forest monitoring"
+title: "Validation of continuous maps using design-based sampling methods"
 subtitle: "Tutorial for the EON Summer School 2025"
 author: Paul Magdon[University of Applied Sciences and Arts (HAWK), paul.magdon@hawk.de]
 date: "2025-08-26"
