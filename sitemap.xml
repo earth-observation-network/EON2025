@@ -2,18 +2,22 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/index.html</loc>
-    <lastmod>2025-09-01T14:04:30.234Z</lastmod>
+    <lastmod>2025-09-01T14:14:58.625Z</lastmod>
   </url>
   <url>
-    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection.html</loc>
-    <lastmod>2025-09-01T14:04:30.159Z</lastmod>
+    <loc>https://earth-observation-network.github.io/EON2025/block2_bas_dob/lidar_forest_structure.html</loc>
+    <lastmod>2025-09-01T14:14:58.553Z</lastmod>
   </url>
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/01_TrainingDataCollection.html</loc>
-    <lastmod>2025-09-01T14:04:30.159Z</lastmod>
+    <lastmod>2025-09-01T14:14:58.552Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection.html</loc>
+    <lastmod>2025-09-01T14:14:58.552Z</lastmod>
   </url>
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/block6/index.html</loc>
-    <lastmod>2025-09-01T14:04:30.221Z</lastmod>
+    <lastmod>2025-09-01T14:14:58.612Z</lastmod>
   </url>
 </urlset>
