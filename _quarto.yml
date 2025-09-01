@@ -38,7 +38,7 @@ website:
       - text: "---"
       - section: "Block 2: Remote Sensing applications in forest management planning"
         contents: 
-          - block2_bas_dob/lidar_forest_structure.html
+          - block2_bas_dob/lidar_forest_structure.qmd
       - text: "---"
       - section: "Block 3: Machine Learning"
         contents:
