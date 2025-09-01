@@ -1,0 +1,196 @@
+---
+title: "Processing of 3D Lidar data to assess forest structure"
+author: "Prakash Basnet and Svenja Dobelmann"
+---
+check out the manual of the lidR package: https://r-lidar.github.io/lidRbook/ 
+
+## 0. Setup
+
+### Install and load required libraries
+```{r, message=FALSE,results='hide'}
+
+
+## install libraries
+# install.packges("lidR")
+# install.packages("terra")
+# install.packages("sf")
+# install.packages("rTwig")
+# install.packages('lidRviewer', repos = c('https://r-lidar.r-universe.dev'))
+
+
+library(lidR)
+library(terra)
+library(sf)
+library(lidRviewer)
+library(dplyr)
+library(rTwig)
+```
+
+### download the data
+download lidar point cloud and ground truth data (BI) from owncloud. 
+```{r, results='hide', eval=FALSE}
+# Data access
+url_las <- "https://cloud.hawk.de/index.php/s/pB4RRmLb4Xxy4Qj/download"
+download.file(url_las, destfile = "uls_goewa.laz", mode = "wb")
+
+url_bi <- "https://cloud.hawk.de/index.php/s/5npprfZYLjg5ip5/download"
+download.file(url_bi, destfile = "trees_bi.gpkg", mode = "wb")
+
+```
+
+### import the data 
+```{r, message=FALSE, results='hide'}
+las <- readLAS("uls_goewa.laz")
+trees_bi <- st_read("trees_bi.gpkg")
+```
+let´s inspect the data. 
+1) whats the point density of the lidar data? 
+2) whats the total number of points and pulses and what is the difference between the two? 
+3) is there any classification in the point cloud? 
+4) how many trees were measured in the BI? 
+5) which tree species are present in the plot? 
+```{r}
+print(las)
+plot(las)
+print(trees_bi)
+```
+
+## 1. Calculating Terrain Models 
+Next we are calculating terrain models, using triangulation (TIN = Triangulated Irregular Network). Since the data is already ground classified we can skip the classification step. The DEM is using the ground return points to interpolate the surface. In contrast, the digital surface model is using the highest lidar returns to represent the top of any object above the ground. Subtracting the two gives us the canopy height. 
+
+check out the documentation of the rasterize_terrain algorithm. Try out different interpolation algorithms and different resolutions. Compare the results visually. 
+```{r, fig.width=10, fig.height=5}
+
+dem <- rasterize_terrain(las, res = 0.5, algorithm = tin())
+dsm <- rasterize_canopy(las, res = 0.5, algorithm = dsmtin(max_edge = 8))
+chm <- dsm - dem
+chm <- terra::focal(chm, w = 3, fun = mean, na.rm = TRUE) # smoothing results 
+
+par(mfrow = c(1,3))
+plot(dem, main = "digital elevation model")
+plot(dsm, main = "digital surface model")
+plot(chm, main = "canopy heigt model")
+
+#writeRaster(dem, "./data/output/dem.tif", overwrite=TRUE)
+#writeRaster(dsm, "./data/output/dsm.tif", overwrite=TRUE)
+#writeRaster(chm, "./data/output/chm.tif", overwrite=TRUE)
+```
+
+## 2. Individual Tree Detection
+Individual Tree Detection (ITD) is the process of spatially locating trees (f.i to extract height information). Tree tops can be detected by applying a Local Maximum Filter (LMF) on the loaded data set. The number of detected trees is correlated to the window size (ws) argument. Small windows sizes usually gives more trees, while large windows size generally miss smaller trees that are “hidden” by big trees that contain the highest points in the neighbourhood. We will use the Tree detection function with variable window size. Any points below 2 m will equate to a window size of 3 m, while points above 20 meters equate to a window size of 5 m. Anything between 2 and 20 meter will have a non-linear relationship.
+
+```{r, fig.width=5, fig.height=5}
+## Function for Local Maximum Filter with variable windows size
+
+f <- function(x) {
+  y <- 2.6 * (-(exp(-0.08*(x-2)) - 1)) + 3 
+  # from https://r-lidar.github.io/lidRbook/itd.html
+  y[x < 2] <- 3
+  y[x > 20] <- 5
+  return(y)
+}
+
+heights <- seq(-5,35,0.5)
+ws <- f(heights)
+
+plot(heights, ws, type = "l",  ylim = c(0,5))
+
+```
+  
+  Let´s run the tree detection algorithm using the user-defined ws function and the CHM created beforehand. Compare the results with the ground truth BI data. 
+- How many of the trees could be detected in the lidar data?  
+- what could be the reasons for that? 
+```{r, message=FALSE, fig.width=10, fig.height=10}
+#ttops <- locate_trees(las, lmf(f)) # only run this if you have a fast computer! 
+ttops <- locate_trees(chm, lmf(f)) 
+
+# plot results 
+plot(chm, col = height.colors(50))
+plot(sf::st_geometry(trees_bi), add = TRUE, pch = 2, col ="blue")
+plot(sf::st_geometry(ttops), add = TRUE, pch = 3, col = "black")
+
+# 3D plot
+las_norm <- normalize_height(las, knnidw()) # normalize point cloud for this vizualisation 
+x <- plot(las_norm, bg = "white", size = 4)
+add_treetops3d(x, ttops)
+
+#writeVector(vect(ttops), "./data/output/ttops_chm_.gpkg", overwrite=TRUE)
+```
+
+## 3. Individual Tree Segmentation
+Individual Tree Segmentation (ITS) is the process of individually delineating detected trees. Even when the algorithm is raster-based (which is the case of dalponte2016()), lidR segments the point cloud and assigns an ID to each point by inserting a new attribute named treeID in the LAS object. This means that every point is associated with a particular tree. 
+
+```{r}
+
+algo <- dalponte2016(chm, ttops)
+las_seg <- segment_trees(las_norm, algo) # segment point cloud
+x <- plot(las_seg, bg = "white", size = 4, color = "treeID") # visualize trees
+add_treetops3d(x, ttops)
+```
+
+## 4. Deriving Metrics using the area-based approach 
+the Area-Based Approach (ABA) allows the creation of wall-to-wall predictions of forest inventory attributes (e.g. basal area or total volume per hectare) by linking ALS variables with field measured references.
+```{r,  fig.width=10, fig.height=10}
+
+r_metr <- pixel_metrics(las, res = 0.5, func = .stdmetrics)
+plot(r_metr)
+```
+## 5.Forest structural complexity 
+(Fractal complexity analysis/ voxel-based box-count dimension or box dimension (Db) method)  
+The box dimension quantifies structural complexity of point clouds using a fractal box-counting approach.   
+It is defined as the slope of the regression between log box (voxel) count and log inverse box (voxel) size, 
+with higher R² values indicating stronger self-similarity.
+Reliable estimates require high-resolution (≤1 cm) point clouds with minimal occlusion.
+```{r}
+# Read data, check and pre-process with lidR
+#data <- readLAS("uls_goewa.laz")
+print(las)
+las_check(las) 
+
+las_norm <- normalize_height(las = las, 
+                        algorithm = tin(), 
+                        use_class = 2)
+
+las_check(las_norm) # check negative outliers
+
+view(las_norm)
+            #Rotate with left mouse button
+            #Zoom with mouse wheel
+            #Pan with right mouse button
+            #Keyboard r or g or b to color with RGB
+            #Keyboard z to color with Z
+            #Keyboard i to color with Intensity
+            #Keyboard c to color with Classification
+            #Keyboard + or - to change the point size
+            #Keyboard l to enable/disable eyes-dome lightning
+```
+
+
+```{r}
+
+las_norm@data[Z<0, 1:3] # Here options are either remove all or assign all to 0, However...
+
+# Forest structural complexity (Box dimension)
+
+cloud = las_norm@data[Z>0.5, 1:3] # Here, all points above 0.5 meter and only X,Y,z coordinates 
+
+db <- box_dimension(cloud = cloud, 
+                    lowercutoff = 0.01, 
+                    rm_int_box = FALSE, 
+                    plot = FALSE )
+str(db)
+
+# Box Dimension (slope)
+db[[2]]$slope
+db[[2]]$r.squared # show similarity
+
+```
+```{r}
+
+# Visualization
+# 2D Plot
+box_dimension(cloud[, 1:3], plot = "2D")
+# 3D Plot
+box_dimension(cloud[, 1:3], plot = "3D")
+```
+
