@@ -38,8 +38,7 @@ website:
       - text: "---"
       - section: "Block 2: Remote Sensing applications in forest management planning"
         contents: 
-          - R_session/Compare_BI_plots.qmd
-          - R_session/Tree_detection.qmd
+          - block2_bas_dob/lidar_forest_structure.Rmd
       - text: "---"
       - section: "Block 3: Machine Learning"
         contents:
