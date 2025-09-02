@@ -1,23 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://earth-observation-network.github.io/EON2025/index.html</loc>
-    <lastmod>2025-09-02T12:40:34.663Z</lastmod>
-  </url>
-  <url>
-    <loc>https://earth-observation-network.github.io/EON2025/block2_bas_dob/lidar_forest_structure.html</loc>
-    <lastmod>2025-09-02T12:40:34.592Z</lastmod>
-  </url>
-  <url>
-    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/01_TrainingDataCollection.html</loc>
-    <lastmod>2025-09-02T12:40:34.591Z</lastmod>
-  </url>
-  <url>
-    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection.html</loc>
-    <lastmod>2025-09-02T12:40:34.591Z</lastmod>
+    <loc>https://earth-observation-network.github.io/EON2025/ml_session/ML_AOA.html</loc>
+    <lastmod>2025-09-02T13:52:33.869Z</lastmod>
   </url>
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/block6/index.html</loc>
-    <lastmod>2025-09-02T12:40:34.651Z</lastmod>
+    <lastmod>2025-09-02T13:52:33.828Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection.html</loc>
+    <lastmod>2025-09-02T13:52:33.768Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/01_TrainingDataCollection.html</loc>
+    <lastmod>2025-09-02T13:52:33.768Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block2_bas_dob/lidar_forest_structure.html</loc>
+    <lastmod>2025-09-02T13:52:33.769Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/index.html</loc>
+    <lastmod>2025-09-02T13:52:33.839Z</lastmod>
   </url>
 </urlset>

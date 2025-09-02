@@ -1,13 +1,211 @@
 [
   {
-    "objectID": "index.html#sensors-equipment",
-    "href": "index.html#sensors-equipment",
-    "title": "Welcome EON Summer School 2025 (31.08-05.09.2025)",
-    "section": "Sensors & Equipment",
-    "text": "Sensors & Equipment\n\nHAWK:\n\nMavic 3 (Enterprise + Thermal + Multispectral)\nMatrics RTK350 incl. L1, P1 & Micasence\nGNSS (Emlid, Garmin)\nTablets (Android)\nForest Measurement Devices (diameter tapes, calipers, vertex, laser range finders, …)\nGeoSlam Mobile Laser Scanner\n\nUni Münster:\n\nDrill & Drop\nDii mini\n\nUni Marburg:\n\nMavic 3 (Enterprise + Thermal + Multispectral)\nMavic 3 Mini Pro\nLoRa based real time climate sensors",
+    "objectID": "ml_session/ML_AOA.html",
+    "href": "ml_session/ML_AOA.html",
+    "title": "Machine learning for remote sensing applications",
+    "section": "",
+    "text": "Slides and data are on https://github.com/earth-observation-network/EON2025/ml_session",
     "crumbs": [
-      "Welcome",
-      "Welcome EON Summer School 2025 (31.08-05.09.2025)"
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#how-to-start",
+    "href": "ml_session/ML_AOA.html#how-to-start",
+    "title": "Machine learning for remote sensing applications",
+    "section": "How to start",
+    "text": "How to start\nFor this tutorial we need the terra package for processing of the satellite data as well as the caret package as a wrapper for machine learning (here: randomForest) algorithms. Sf is used for handling of the training data available as vector data (polygons). Mapview is used for spatial visualization of the data. CAST will be used to account for spatial dependencies during model validation as well as for the estimation of the AOA.\n\nlibrary(CAST)\nlibrary(terra)\nlibrary(caret)\nlibrary(randomForest)\nlibrary(mapview)\nlibrary(sf)\nlibrary(CAST)\nlibrary(tmap)",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#data-preparation",
+    "href": "ml_session/ML_AOA.html#data-preparation",
+    "title": "Machine learning for remote sensing applications",
+    "section": "Data preparation",
+    "text": "Data preparation\nTo start with, let’s load and explore the remote sensing raster data as well as the vector data that include the training sites.\n\nRaster data (predictor variables)\n\nmof_sen &lt;- rast(\"data/sentinel_uniwald.grd\")\nprint(mof_sen)\n\nclass       : SpatRaster \ndimensions  : 522, 588, 10  (nrow, ncol, nlyr)\nresolution  : 10, 10  (x, y)\nextent      : 474200, 480080, 5629540, 5634760  (xmin, xmax, ymin, ymax)\ncoord. ref. : +proj=utm +zone=32 +datum=WGS84 +units=m +no_defs \nsource      : sentinel_uniwald.grd \nnames       : T32UM~1_B02, T32UM~1_B03, T32UM~1_B04, T32UM~1_B05, T32UM~1_B06, T32UM~1_B07, ... \nmin values  :         723,         514,         294,    341.8125,    396.9375,    440.8125, ... \nmax values  :        8325,        9087,       13810,   7368.7500,   8683.8125,   9602.3125, ... \n\n\nThe raster data contain a subset of the optical data from Sentinel-2 (see band information here: https://en.wikipedia.org/wiki/Sentinel-2) given in scaled reflectances (B02-B11). In addition,the NDVI was calculated. Let’s plot the data to get an idea how the variables look like.\n\nplot(mof_sen)\n\n\n\n\n\n\n\nplotRGB(mof_sen,r=3,g=2,b=1,stretch=\"lin\")\n\n\n\n\n\n\n\n\n\n\nVector data (Response variable)\nThe vector file is read as sf object. It contains the training sites that will be regarded here as a ground truth for the land cover classification.\n\ntrainSites &lt;- read_sf(\"data/trainingsites_LUC.gpkg\")\n\nUsing mapview we can visualize the aerial image channels in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.\n\nmapview(mof_sen[[1]], map.types = \"Esri.WorldImagery\") +\n  mapview(trainSites)\n\n\n\n\n\n\n\nDraw training samples and extract raster information\nIn order to train a machine learning model between the spectral properties and the land cover class, we first need to create a data frame that contains the predictor variables at the location of the training sites as well as the corresponding class information. However, using each pixel overlapped by a polygon would lead to a overly huge dataset, therefore, we first draw training samples from the polygon. Let’s use 1000 randomly sampled (within the polygons) pixels as training data set.\n\ntrainlocations &lt;- st_sample(trainSites,1000)\ntrainlocations &lt;- st_join(st_sf(trainlocations), trainSites)\nmapview(trainlocations)\n\n\n\n\n\nNext, we can extract the raster values for these locations. The resulting data frame contains the predictor variables for each training location that we can merged with the information on the land cover class from the sf object.\n\ntrainDat &lt;- extract(mof_sen, trainlocations, df=TRUE)\ntrainDat &lt;- data.frame(trainDat, trainlocations)\nhead(trainDat)\n\n  ID T32UMB_20170510T103031_B02 T32UMB_20170510T103031_B03\n1  1                        828                        790\n2  2                        932                        923\n3  3                        801                        768\n4  4                        782                        678\n5  5                        843                        784\n6  6                       1112                       1020\n  T32UMB_20170510T103031_B04 T32UMB_20170510T103031_B05\n1                        512                   1026.000\n2                        737                   1266.000\n3                        447                    905.125\n4                        432                    912.500\n5                        489                    951.500\n6                        841                   1168.125\n  T32UMB_20170510T103031_B06 T32UMB_20170510T103031_B07\n1                   2832.500                   3659.250\n2                   2454.688                   2775.562\n3                   1698.562                   1927.875\n4                   1677.000                   1937.625\n5                   2701.000                   3462.750\n6                   2257.062                   2695.500\n  T32UMB_20170510T103031_B08 T32UMB_20170510T103031_B11\n1                       3567                   1184.625\n2                       3030                   2177.250\n3                       2043                   1154.812\n4                       1636                   1217.562\n5                       3368                   1089.625\n6                       2361                   1803.375\n  T32UMB_20170510T103031_B12      NDVI id  LN    Type           trainlocations\n1                   607.9375 0.7489581 NA 104  Felder POINT (478406.2 5631084)\n2                  1144.5000 0.6087072 23 305   Wiese POINT (478220.4 5633039)\n3                   564.3125 0.6409639 NA   2   Buche POINT (477382.1 5632647)\n4                   590.6250 0.5822051 NA   2   Buche POINT (477306.7 5631685)\n5                   524.9375 0.7464350 NA 104  Felder POINT (478393.4 5631073)\n6                  1070.3750 0.4747033 10 401 Strasse POINT (478400.8 5631296)",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#model-training",
+    "href": "ml_session/ML_AOA.html#model-training",
+    "title": "Machine learning for remote sensing applications",
+    "section": "Model training",
+    "text": "Model training\n\nPredictors and response\nFor model training we need to define the predictor and response variables. As predictors we can use basically all information from the raster stack as we might assume they could all be meaningful for the differentiation between the land cover classes. As response variable we use the “Label” column of the data frame.\n\npredictors &lt;- names(mof_sen)\nresponse &lt;- \"Type\"\n\n\n\nA first “default” model\nWe then train a Random Forest model to lean how the classes can be distinguished based on the predictors (note: other algorithms would work as well. See https://topepo.github.io/caret/available-models.html for a list of algorithms available in caret). Caret’s train function is doing this job.\nSo let’s see how we can then train a “default” random forest model. We specify “rf” as method, indicating that a Random Forest is applied. We reduce the number of trees (ntree) to 75 to speed things up. Note that usually a larger number (&gt;250) is appropriate.\n\nmodel &lt;- train(trainDat[,predictors],\n               trainDat[,response],\n               method=\"rf\",\n               ntree=75)\nmodel\n\nRandom Forest \n\n1000 samples\n  10 predictor\n  10 classes: 'Buche', 'Duglasie', 'Eiche', 'Felder', 'Fichte', 'Laerche', 'Siedlung', 'Strasse', 'Wasser', 'Wiese' \n\nNo pre-processing\nResampling: Bootstrapped (25 reps) \nSummary of sample sizes: 1000, 1000, 1000, 1000, 1000, 1000, ... \nResampling results across tuning parameters:\n\n  mtry  Accuracy   Kappa    \n   2    0.8298612  0.7920802\n   6    0.8278806  0.7899781\n  10    0.8210613  0.7817650\n\nAccuracy was used to select the optimal model using the largest value.\nThe final value used for the model was mtry = 2.\n\n\nTo perform the classification we can then use the trained model and apply it to each pixel of the raster stack using the predict function.\n\nprediction &lt;- predict(mof_sen,model)\n\nThen we can then create a map with meaningful colors of the predicted land cover using the tmap package.\n\ncols &lt;- rev(c(\"palegreen\", \"blue\", \"grey\", \"red\", \"lightgreen\", \"forestgreen\", \"beige\",\"brown\",\"darkgreen\",\"yellowgreen\"))\n\ntm_shape(prediction) +\n  tm_raster(palette = cols,title = \"LUC\")+\n  tm_scale_bar(bg.color=\"white\",bg.alpha=0.75)+\n  tm_layout(legend.bg.color = \"white\",\n            legend.bg.alpha = 0.75)\n\n\n\n\n\n\n\n\nBased on this we can now discuss more advanced aspects of cross-validation for performance assessment as well as spatial variable selection strategies.\n\n\nModel training with spatial CV and variable selection\nBefore starting model training we can specify some control settings using trainControl. For hyperparameter tuning (mtry) as well as for error assessment we use a spatial cross-validation. Here, the training data are split into 5 folds by trying to resemble the geographic distance distribution required when predicting the entire area from the trainign data,\n\nindices &lt;- knndm(trainlocations,mof_sen,k=5)\ngd &lt;- geodist(trainlocations,mof_sen,cvfolds = indices$indx_train)\nplot(gd)+ scale_x_log10(labels=round)\n\n\n\n\n\n\n\nctrl &lt;- trainControl(method=\"cv\", \n                     index = indices$indx_train,\n                     indexOut = indices$indx_test,\n                     savePredictions = TRUE)\n\nModel training is then again performed using caret’s train function. However we use a wrapper around it that is selecting the predictor variables which are relevant for making predictions to new spatial locations (forward feature selection, fss). We use the Kappa index as metric to select the best model.\n\n# train the model\nset.seed(100)\nmodel &lt;- ffs(trainDat[,predictors],\n             trainDat[,response],\n             method=\"rf\",\n             metric=\"Kappa\",\n             trControl=ctrl,\n             importance=TRUE,\n             ntree=100,\n             verbose=FALSE)\n\n\nprint(model)\n\nSelected Variables: \nT32UMB_20170510T103031_B05 T32UMB_20170510T103031_B06 T32UMB_20170510T103031_B02 NDVI\n---\nRandom Forest \n\n1000 samples\n   4 predictor\n  10 classes: 'Buche', 'Duglasie', 'Eiche', 'Felder', 'Fichte', 'Laerche', 'Siedlung', 'Strasse', 'Wasser', 'Wiese' \n\nNo pre-processing\nResampling: Cross-Validated (10 fold) \nSummary of sample sizes: 790, 865, 727, 870, 748 \nResampling results across tuning parameters:\n\n  mtry  Accuracy   Kappa    \n  2     0.7637770  0.5847188\n  3     0.7792294  0.6105195\n  4     0.7727852  0.6070828\n\nKappa was used to select the optimal model using the largest value.\nThe final value used for the model was mtry = 3.\n\nplot(varImp(model))\n\n\n\n\n\n\n\n\n\n\nModel validation\nWhen we print the model (see above) we get a summary of the prediction performance as the average Kappa and Accuracy of the three spatial folds. Looking at all cross-validated predictions together we can get the “global” model performance.\n\n# get all cross-validated predictions:\ncvPredictions &lt;- model$pred[model$pred$mtry==model$bestTune$mtry,]\n# calculate cross table:\ntable(cvPredictions$pred,cvPredictions$obs)\n\n          \n           Buche Duglasie Eiche Felder Fichte Laerche Siedlung Strasse Wasser\n  Buche        0        0     6      0      6       0        0       0      0\n  Duglasie     0        4     0      0      0       0        0       0      0\n  Eiche        1        0     7      1      3       0        0       0      0\n  Felder       8        0     0    249      0       0        0       4      0\n  Fichte       1        0     0      0      2       0        0       0      0\n  Laerche      0        0     0      0      0       0        0       0      0\n  Siedlung     0        0     0      4      0       0        0       2      0\n  Strasse      0        0     0      4      0       0        0      36      0\n  Wasser       0        0     0      7      1       0        0       0      0\n  Wiese        2        0     0     35      0       0        0       2      0\n          \n           Wiese\n  Buche        0\n  Duglasie     0\n  Eiche        0\n  Felder      11\n  Fichte       0\n  Laerche      0\n  Siedlung     2\n  Strasse      1\n  Wasser       0\n  Wiese       76\n\n\n\n\nVisualize the final model predictions\n\nprediction &lt;- predict(mof_sen,model)\ncols &lt;- rev(c(\"palegreen\", \"blue\", \"grey\", \"red\", \"lightgreen\", \"forestgreen\", \"beige\",\"brown\",\"darkgreen\",\"yellowgreen\"))\n\ntm_shape(prediction) +\n  tm_raster(palette = cols,title = \"LUC\")+\n  tm_scale_bar(bg.color=\"white\",bg.alpha=0.75)+\n  tm_layout(legend.bg.color = \"white\",\n            legend.bg.alpha = 0.75)",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#area-of-applicability",
+    "href": "ml_session/ML_AOA.html#area-of-applicability",
+    "title": "Machine learning for remote sensing applications",
+    "section": "Area of Applicability",
+    "text": "Area of Applicability\nWe have seen that technically, the trained model can be applied to the entire area of interest (and beyond…as long as the sentinel predictors are available which they are, even globally). But we should assess if we SHOULD apply our model to the entire area. The model should only be applied to locations that feature predictor properties that are comparable to those of the training data. If dissimilarity to the training data is larger than the dissimmilarity within the training data, the model should not be applied to this location.\n\nAOA &lt;- aoa(mof_sen,model,LPD=TRUE, verbose=FALSE)\nplot(AOA$AOA)\n\n\n\n\n\n\n\n\nThe result of the aoa function has two layers: the dissimilarity index (DI) and the area of applicability (AOA). The DI can take values from 0 to Inf, where 0 means that a location has predictor properties that are identical to properties observed in the training data. With increasing values the dissimilarity increases. The AOA has only two values: 0 and 1. 0 means that a location is outside the area of applicability, 1 means that the model is inside the area of applicability. As an option, we cal also calculate the Local Point Density (LPD), which tells us, for a prediction location, how MANY similar training data points were used during modle training.\n\nError profiles\nLet’s assume there is a relationship between the density of training data points in the predictor space (LPD) and the model performance. Let’s analyze that and use that to predict the prediction performance.\n\nplot(AOA$LPD)\n\n\n\n\n\n\n\nep &lt;- errorProfiles(model,AOA,variable=\"LPD\")\nplot(ep)\n\n\n\n\n\n\n\nplot(predict(AOA$LPD,ep))",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#prepare-data",
+    "href": "ml_session/ML_AOA.html#prepare-data",
+    "title": "Machine learning for remote sensing applications",
+    "section": "Prepare data",
+    "text": "Prepare data\n\nmof_sen &lt;- rast(\"data/sentinel_uniwald.grd\")\nLAIdat &lt;- st_read(\"data/trainingsites_LAI.gpkg\")\n\nReading layer `trainingsites_LAI' from data source \n  `/home/hanna/Documents/Github/earth-observation-network/EON2025/ml_session/data/trainingsites_LAI.gpkg' \n  using driver `GPKG'\nSimple feature collection with 67 features and 10 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 476350 ymin: 5631537 xmax: 478075 ymax: 5632765\nProjected CRS: WGS 84 / UTM zone 32N\n\ntrainDat &lt;- extract(mof_sen,LAIdat,na.rm=TRUE)\ntrainDat$LAI &lt;- LAIdat$LAI\n\n\nmeanmodel &lt;- mof_sen[[1]]\nvalues(meanmodel) &lt;- mean(trainDat$LAI)\nplot(meanmodel)\n\n\n\n\n\n\n\nrandommodel &lt;- mof_sen[[1]]\nvalues(randommodel)&lt;- runif(ncell(randommodel),min = 0,4)\n\nplot(randommodel)",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#a-simple-linear-model",
+    "href": "ml_session/ML_AOA.html#a-simple-linear-model",
+    "title": "Machine learning for remote sensing applications",
+    "section": "A simple linear model",
+    "text": "A simple linear model\nAs a simple first approach we might develop a linear model. Let’s assume a linear relationship between the NDVI and the LAI\n\nplot(trainDat$NDVI,trainDat$LAI)\nmodel_lm &lt;- lm(LAI~NDVI,data=trainDat)\nsummary(model_lm)\n\n\nCall:\nlm(formula = LAI ~ NDVI, data = trainDat)\n\nResiduals:\n     Min       1Q   Median       3Q      Max \n-1.87314 -0.52143 -0.03363  0.63668  2.25252 \n\nCoefficients:\n            Estimate Std. Error t value Pr(&gt;|t|)   \n(Intercept)  -0.8518     1.4732  -0.578  0.56515   \nNDVI          6.8433     2.3160   2.955  0.00435 **\n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 0.8887 on 65 degrees of freedom\nMultiple R-squared:  0.1184,    Adjusted R-squared:  0.1049 \nF-statistic: 8.731 on 1 and 65 DF,  p-value: 0.004354\n\nabline(model_lm,col=\"red\")\n\n\n\n\n\n\n\nprediction_LAI &lt;- predict(mof_sen,model_lm,na.rm=T)\nplot(prediction_LAI)\n\n\n\n\n\n\n\nlimodelpred &lt;- -0.8518+mof_sen$NDVI*6.8433\nmapview(limodelpred)",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "ml_session/ML_AOA.html#the-machine-learning-way",
+    "href": "ml_session/ML_AOA.html#the-machine-learning-way",
+    "title": "Machine learning for remote sensing applications",
+    "section": "The machine learning way",
+    "text": "The machine learning way\n\nDefine CV folds\nLet’s use the NNDM cross-validation approach.\n\nnndm_folds &lt;- knndm(LAIdat,mof_sen,k=3)\n\nLet’s explore the geodistance\n\ngd &lt;- geodist(LAIdat,mof_sen,cvfolds = nndm_folds$indx_test)\nplot(gd)\n\n\n\n\n\n\n\n\n\n\nModel training\n\nctrl &lt;- trainControl(method=\"cv\",\n                     index=nndm_folds$indx_train,\n                     indexOut = nndm_folds$indx_test,\n                    savePredictions = \"all\")\n\n\nmodel &lt;- ffs(trainDat[,predictors],\n             trainDat$LAI,\n             method=\"rf\",\n             trControl = ctrl,\n             importance=TRUE,\n             verbose=FALSE)\n\n\nmodel\n\nSelected Variables: \nT32UMB_20170510T103031_B07 T32UMB_20170510T103031_B08 NDVI\n---\nRandom Forest \n\n67 samples\n 3 predictor\n\nNo pre-processing\nResampling: Cross-Validated (10 fold) \nSummary of sample sizes: 41, 44, 49 \nResampling results across tuning parameters:\n\n  mtry  RMSE       Rsquared   MAE      \n  2     0.8555931  0.1988015  0.7114673\n  3     0.8561228  0.2128638  0.7175364\n\nRMSE was used to select the optimal model using the smallest value.\nThe final value used for the model was mtry = 2.\n\n\n\n\nLAI prediction\nLet’s then use the trained model for prediction.\n\nLAIprediction &lt;- predict(mof_sen,model)\nplot(LAIprediction)\n\n\n\n\n\n\n\n\n\nQuestion?! Why does it look so different than the linear model?\n\n\n\nAOA estimation\n\nAOA &lt;- aoa(mof_sen,model,LPD = TRUE, verbose=FALSE)\nplot(AOA$AOA)\n\n\n\n\n\n\n\nplot(AOA$LPD)\n\n\n\n\n\n\n\n\n\n\nError profiles\nLet’s assume there is a relationship between the density of training data points in the predictor space (LPD) and the model performance. Let’s analyze that and use that to predict the prediction performance.\n\nep &lt;- errorProfiles(model,AOA,variable=\"DI\")\nplot(ep)\n\n\n\n\n\n\n\nplot(predict(AOA$DI,ep))",
+    "crumbs": [
+      "Block 3: Machine Learning",
+      "Machine learning for remote sensing applications"
+    ]
+  },
+  {
+    "objectID": "block6/index.html",
+    "href": "block6/index.html",
+    "title": "Materials",
+    "section": "",
+    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.\n\n\n\nParticipants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)\n\n\n\nThe slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
+    "crumbs": [
+      "Block 5: Understanding spatial patterns: how to measure and compare them",
+      "Materials"
+    ]
+  },
+  {
+    "objectID": "block6/index.html#slides",
+    "href": "block6/index.html#slides",
+    "title": "Materials",
+    "section": "",
+    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.",
+    "crumbs": [
+      "Block 5: Understanding spatial patterns: how to measure and compare them",
+      "Materials"
+    ]
+  },
+  {
+    "objectID": "block6/index.html#prerequisites",
+    "href": "block6/index.html#prerequisites",
+    "title": "Materials",
+    "section": "",
+    "text": "Participants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)",
+    "crumbs": [
+      "Block 5: Understanding spatial patterns: how to measure and compare them",
+      "Materials"
+    ]
+  },
+  {
+    "objectID": "block6/index.html#exercises",
+    "href": "block6/index.html#exercises",
+    "title": "Materials",
+    "section": "",
+    "text": "The slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
+    "crumbs": [
+      "Block 5: Understanding spatial patterns: how to measure and compare them",
+      "Materials"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/02_ValidationDataCollection.html",
+    "href": "block1_magdon/02_ValidationDataCollection.html",
+    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "section": "",
+    "text": "rm(list=ls())\nlibrary(sf)\n\nLinking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE\n\nlibrary(terra)\n\nterra 1.8.60\n\nlibrary(ggplot2)\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\ndata_dir=paste0(find_rstudio_root_file(),\"/block1_magdon/data/\")",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Validation of continuous maps using design-based sampling methods"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
+    "href": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
+    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "section": "Systematic sample to collect reference data for map validation",
+    "text": "Systematic sample to collect reference data for map validation\nTo validate the map we use a systematic sample grid. In a real world application we do not know the true population values. Therefore, field work would be needed to collect reference data at the selected sample points. In this workshop we assume that the agp_pop map represents the true value without any errors. Thus, we don’t need to go to field but we can sample the data by extracting the true values from the map at the sample locations.\n\n# we will use n=100 sample plots\nn=100\np1 = sf::st_sample(np_boundary,size=n,type='regular')\n\nggplot()+geom_sf(data=np_boundary,fill=NA)+\n  geom_sf(data=p1)\n\n\n\n\n\n\n\n\nAt each sample point we extract the predicted and observed AGB value.\n\nobs &lt;- terra::extract(agb_pop,vect(p1))\nnames(obs)&lt;-c('ID','obs')\n\npred &lt;- terra::extract(agb_model,vect(p1))\nnames(pred)&lt;-c('ID','pred')\nvalidation&lt;-data.frame(observed=obs$obs, predicted=pred$pred)\n\n# we need to remove the na values from this dataframe. In real world applications\n# such NA values can,  occur for example at inaccessible field plots.\n\nvalidation&lt;-validation[complete.cases(validation),]",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Validation of continuous maps using design-based sampling methods"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
+    "href": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
+    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "section": "Assessment of the ABG-model performance",
+    "text": "Assessment of the ABG-model performance\n\nggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')\n\n\n\n\n\n\n\n\n\nSample RMSE\nAgain we can use the RMSE to express the mean difference between observed and predicted AGB.\n\nRMSE_sample = sqrt(sum((validation$observed-validation$predicted)^2)/nrow(validation))\n\nThe sample RMSE is 38.89* t/ha. To better compare the values between different target variables and models is can also express as a proportion relative to the mean value of the predictions.\n\nrRMSE = RMSE_sample/mean(validation$predicted)\n\nOn average we expect that the AGB estimate of our model has an error of 24.1 %.\n\n\nError distribution\nBut is this RMSE valid for the entire range of the observed values or do we expect higher errors for higher AGB values?\nTo see how the model performs over target value range we can use the following analysis plots.\n\nvalidation$resid&lt;-validation$observed-validation$predicted\n\np1&lt;-ggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')+\n  xlim(0,250)+ylim(0,250)+\n  geom_abline(slope=1,intercept = 0)+\n  stat_summary(fun.data= mean_cl_normal) + \n  geom_smooth(method='lm')\n\n\n\np2&lt;-ggplot(data=validation,aes(x=observed, y=resid))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Residuals')+\n  xlim(0,250)+ylim(-50,+50)+\n  geom_abline(slope=0,intercept = 1)\n\np3&lt;-ggplot(data=validation,aes(x=resid))+\n  geom_histogram(aes(y=..density..),fill='grey',binwidth=10)+\n  xlab('Observed AGB t/ha')+ylab('Density')+\n  xlim(-150,150)+\n  stat_function(fun = dnorm, geom=\"polygon\",args = list(mean = mean(validation$resid), sd = sd(validation$resid)),color='blue',alpha=0.4,fill='blue')+\n  geom_vline(xintercept=0,color='blue')+\n  geom_vline(xintercept=mean(validation$resid),color='red')\np1+p2+p3+plot_layout(ncol=3)\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_summary()`).\n\n\nWarning: Computation failed in `stat_summary()`.\nCaused by error in `fun.data()`:\n! The package \"Hmisc\" is required.\n\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_smooth()`).\n\n\nWarning: Removed 1 row containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: Removed 18 rows containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.\nℹ Please use `after_stat(density)` instead.\n\n\nWarning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_bar()`).",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Validation of continuous maps using design-based sampling methods"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/01_TrainingDataCollection.html",
+    "href": "block1_magdon/01_TrainingDataCollection.html",
+    "title": "Collection of training data for remote sensing model building",
+    "section": "",
+    "text": "#install.packages(\"devtools\")\n#devtools::install_github(\"bleutner/RStoolbox\")\nlibrary(sf)\n\nLinking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE\n\nlibrary(RStoolbox)\n\nThis is version 1.0.2.1 of RStoolbox\n\nlibrary(terra)\n\nterra 1.8.60\n\nlibrary(ggplot2)\nlibrary(mapview)\nlibrary(kableExtra)\nlibrary(dplyr)\n\n\nAttache Paket: 'dplyr'\n\n\nDas folgende Objekt ist maskiert 'package:kableExtra':\n\n    group_rows\n\n\nDie folgenden Objekte sind maskiert von 'package:terra':\n\n    intersect, union\n\n\nDie folgenden Objekte sind maskiert von 'package:stats':\n\n    filter, lag\n\n\nDie folgenden Objekte sind maskiert von 'package:base':\n\n    intersect, setdiff, setequal, union\n\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\nlibrary(rmarkdown)\nlibrary(tidyr)\n\n\nAttache Paket: 'tidyr'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    extract\n\nlibrary(tibble)",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Collection of training data for remote sensing modelling based on spectral variability"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/01_TrainingDataCollection.html#dimension-reduction-pca",
+    "href": "block1_magdon/01_TrainingDataCollection.html#dimension-reduction-pca",
+    "title": "Collection of training data for remote sensing model building",
+    "section": "Dimension reduction (PCA)",
+    "text": "Dimension reduction (PCA)\nIn a fist step we reduce the dimensions of the 9 Sentinel-2 bands while maintaining most of the information, using a principal component analysis (PCA).\n\n# Calculation of the principlal components using the RStoolbox\npca&lt;-RStoolbox::rasterPCA(s2,nSamples = 5000, spca=TRUE )\n\n\n|---------|---------|---------|---------|\n=========================================\n                                          \n\n# Extracting the first three components\nrgb_raster &lt;- subset(pca$map, 1:3)\n\n# Function to scale the pixel values to 0-255\nscale_fun &lt;- function(x) {\n  # Calculation of the 2% and 98% quantile\n  q &lt;- quantile(x, c(0.02, 0.98), na.rm = TRUE)\n  \n  # scaling the values\n  x &lt;- (x - q[1]) / (q[2] - q[1]) * 255\n  \n  # restrict the values to 0-255\n  x &lt;- pmin(pmax(x, 0), 255)\n  \n  return(x)\n}\n\n# Scaling of each band\nfor (i in 1:3) {\n  rgb_raster[[i]] &lt;- app(rgb_raster[[i]], scale_fun)\n}\n\n# Plot the first three principal components as RGB\nplotRGB(rgb_raster, r = 1, g = 2, b = 3)\n\n\n\n\n\n\n\n# Show importance of componentes\nsummary(pca$model)\n\nImportance of components:\n                          Comp.1    Comp.2    Comp.3     Comp.4     Comp.5\nStandard deviation     2.2346500 1.8079296 0.6737201 0.38366893 0.26048690\nProportion of Variance 0.5548512 0.3631788 0.0504332 0.01635576 0.00753927\nCumulative Proportion  0.5548512 0.9180300 0.9684632 0.98481898 0.99235825\n                            Comp.6      Comp.7       Comp.8       Comp.9\nStandard deviation     0.177485712 0.162607669 0.0812795411 0.0650151820\nProportion of Variance 0.003500131 0.002937917 0.0007340404 0.0004696638\nCumulative Proportion  0.995858379 0.998796296 0.9995303362 1.0000000000\n\n\nFrom the output of the PCA we see that we can capture 92% of the variability with the first two components. Thus we will only use the PC1 and PC2 for the subsequent analysis.",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Collection of training data for remote sensing modelling based on spectral variability"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/01_TrainingDataCollection.html#unsupervised-clustering",
+    "href": "block1_magdon/01_TrainingDataCollection.html#unsupervised-clustering",
+    "title": "Collection of training data for remote sensing model building",
+    "section": "Unsupervised clustering",
+    "text": "Unsupervised clustering\nIn the next step we run an unsupervised classification of the PC1 and PC2 to get a clustered map. For the unsupervised classification we need to take a decision on the number of classes/clusters to be created. Here we will take \\(n=5\\) classes. However, depending on the target variable this value need to be adjusted.\n\nset.seed(2222)\ncluster &lt;- RStoolbox::unsuperClass(pca$map[[c('PC1','PC2')]], nSamples = 100, nClasses = 5, nStarts = 5)\n\n\n## Plots\ncolors &lt;- rainbow(5)\nplot(cluster$map, col = colors, legend = TRUE, axes = TRUE, box =TRUE)\n\n\n\n\n\n\n\n\nThe map shows a clear spatial patterns related to the elevation, tree species and vitality status of the National Park forests.",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Collection of training data for remote sensing modelling based on spectral variability"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/01_TrainingDataCollection.html#implement-a-plot-design",
+    "href": "block1_magdon/01_TrainingDataCollection.html#implement-a-plot-design",
+    "title": "Collection of training data for remote sensing model building",
+    "section": "Implement a plot design",
+    "text": "Implement a plot design\nTo extract pixel values for the sample location we need to define a plot design. For this exercise we will simulate a circular fixed area plot with a radius of 13 m.\n\n# Create a training by extracting the mean value of all pixels touching\n# a buffered area with 13m around the plot center\n\nplots &lt;- sf::st_buffer(sf_samples,dist = 13)\ntrain&lt;-terra::extract(s2,plots,fun='mean',bind=FALSE,na.rm=TRUE)\n\nplots &lt;- plots %&gt;% mutate(ID=row_number())\ntrain &lt;- plots %&gt;% left_join(train, by= \"ID\")\nmapview::mapview(train, zcol=\"class_unsupervised\",\n        map.types = c(\"Esri.WorldShadedRelief\", \"OpenStreetMap.DE\"))+\n  mapview(np_boundary,alpha.regions = 0.2, aplha = 1)",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Collection of training data for remote sensing modelling based on spectral variability"
     ]
   },
   {
@@ -88,124 +286,14 @@
     ]
   },
   {
-    "objectID": "block1_magdon/01_TrainingDataCollection.html",
-    "href": "block1_magdon/01_TrainingDataCollection.html",
-    "title": "Collection of training data for remote sensing model building",
-    "section": "",
-    "text": "#install.packages(\"devtools\")\n#devtools::install_github(\"bleutner/RStoolbox\")\nlibrary(sf)\n\nLinking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE\n\nlibrary(RStoolbox)\n\nThis is version 1.0.2.1 of RStoolbox\n\nlibrary(terra)\n\nterra 1.8.60\n\nlibrary(ggplot2)\nlibrary(mapview)\nlibrary(kableExtra)\nlibrary(dplyr)\n\n\nAttache Paket: 'dplyr'\n\n\nDas folgende Objekt ist maskiert 'package:kableExtra':\n\n    group_rows\n\n\nDie folgenden Objekte sind maskiert von 'package:terra':\n\n    intersect, union\n\n\nDie folgenden Objekte sind maskiert von 'package:stats':\n\n    filter, lag\n\n\nDie folgenden Objekte sind maskiert von 'package:base':\n\n    intersect, setdiff, setequal, union\n\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\nlibrary(rmarkdown)\nlibrary(tidyr)\n\n\nAttache Paket: 'tidyr'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    extract\n\nlibrary(tibble)",
+    "objectID": "index.html#sensors-equipment",
+    "href": "index.html#sensors-equipment",
+    "title": "Welcome EON Summer School 2025 (31.08-05.09.2025)",
+    "section": "Sensors & Equipment",
+    "text": "Sensors & Equipment\n\nHAWK:\n\nMavic 3 (Enterprise + Thermal + Multispectral)\nMatrics RTK350 incl. L1, P1 & Micasence\nGNSS (Emlid, Garmin)\nTablets (Android)\nForest Measurement Devices (diameter tapes, calipers, vertex, laser range finders, …)\nGeoSlam Mobile Laser Scanner\n\nUni Münster:\n\nDrill & Drop\nDii mini\n\nUni Marburg:\n\nMavic 3 (Enterprise + Thermal + Multispectral)\nMavic 3 Mini Pro\nLoRa based real time climate sensors",
     "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Collection of training data for remote sensing modelling based on spectral variability"
-    ]
-  },
-  {
-    "objectID": "block1_magdon/01_TrainingDataCollection.html#dimension-reduction-pca",
-    "href": "block1_magdon/01_TrainingDataCollection.html#dimension-reduction-pca",
-    "title": "Collection of training data for remote sensing model building",
-    "section": "Dimension reduction (PCA)",
-    "text": "Dimension reduction (PCA)\nIn a fist step we reduce the dimensions of the 9 Sentinel-2 bands while maintaining most of the information, using a principal component analysis (PCA).\n\n# Calculation of the principlal components using the RStoolbox\npca&lt;-RStoolbox::rasterPCA(s2,nSamples = 5000, spca=TRUE )\n\n\n|---------|---------|---------|---------|\n=========================================\n                                          \n\n# Extracting the first three components\nrgb_raster &lt;- subset(pca$map, 1:3)\n\n# Function to scale the pixel values to 0-255\nscale_fun &lt;- function(x) {\n  # Calculation of the 2% and 98% quantile\n  q &lt;- quantile(x, c(0.02, 0.98), na.rm = TRUE)\n  \n  # scaling the values\n  x &lt;- (x - q[1]) / (q[2] - q[1]) * 255\n  \n  # restrict the values to 0-255\n  x &lt;- pmin(pmax(x, 0), 255)\n  \n  return(x)\n}\n\n# Scaling of each band\nfor (i in 1:3) {\n  rgb_raster[[i]] &lt;- app(rgb_raster[[i]], scale_fun)\n}\n\n# Plot the first three principal components as RGB\nplotRGB(rgb_raster, r = 1, g = 2, b = 3)\n\n\n\n\n\n\n\n# Show importance of componentes\nsummary(pca$model)\n\nImportance of components:\n                          Comp.1    Comp.2    Comp.3     Comp.4     Comp.5\nStandard deviation     2.2346500 1.8079296 0.6737201 0.38366893 0.26048690\nProportion of Variance 0.5548512 0.3631788 0.0504332 0.01635576 0.00753927\nCumulative Proportion  0.5548512 0.9180300 0.9684632 0.98481898 0.99235825\n                            Comp.6      Comp.7       Comp.8       Comp.9\nStandard deviation     0.177485712 0.162607669 0.0812795411 0.0650151820\nProportion of Variance 0.003500131 0.002937917 0.0007340404 0.0004696638\nCumulative Proportion  0.995858379 0.998796296 0.9995303362 1.0000000000\n\n\nFrom the output of the PCA we see that we can capture 92% of the variability with the first two components. Thus we will only use the PC1 and PC2 for the subsequent analysis.",
-    "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Collection of training data for remote sensing modelling based on spectral variability"
-    ]
-  },
-  {
-    "objectID": "block1_magdon/01_TrainingDataCollection.html#unsupervised-clustering",
-    "href": "block1_magdon/01_TrainingDataCollection.html#unsupervised-clustering",
-    "title": "Collection of training data for remote sensing model building",
-    "section": "Unsupervised clustering",
-    "text": "Unsupervised clustering\nIn the next step we run an unsupervised classification of the PC1 and PC2 to get a clustered map. For the unsupervised classification we need to take a decision on the number of classes/clusters to be created. Here we will take \\(n=5\\) classes. However, depending on the target variable this value need to be adjusted.\n\nset.seed(2222)\ncluster &lt;- RStoolbox::unsuperClass(pca$map[[c('PC1','PC2')]], nSamples = 100, nClasses = 5, nStarts = 5)\n\n\n## Plots\ncolors &lt;- rainbow(5)\nplot(cluster$map, col = colors, legend = TRUE, axes = TRUE, box =TRUE)\n\n\n\n\n\n\n\n\nThe map shows a clear spatial patterns related to the elevation, tree species and vitality status of the National Park forests.",
-    "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Collection of training data for remote sensing modelling based on spectral variability"
-    ]
-  },
-  {
-    "objectID": "block1_magdon/01_TrainingDataCollection.html#implement-a-plot-design",
-    "href": "block1_magdon/01_TrainingDataCollection.html#implement-a-plot-design",
-    "title": "Collection of training data for remote sensing model building",
-    "section": "Implement a plot design",
-    "text": "Implement a plot design\nTo extract pixel values for the sample location we need to define a plot design. For this exercise we will simulate a circular fixed area plot with a radius of 13 m.\n\n# Create a training by extracting the mean value of all pixels touching\n# a buffered area with 13m around the plot center\n\nplots &lt;- sf::st_buffer(sf_samples,dist = 13)\ntrain&lt;-terra::extract(s2,plots,fun='mean',bind=FALSE,na.rm=TRUE)\n\nplots &lt;- plots %&gt;% mutate(ID=row_number())\ntrain &lt;- plots %&gt;% left_join(train, by= \"ID\")\nmapview::mapview(train, zcol=\"class_unsupervised\",\n        map.types = c(\"Esri.WorldShadedRelief\", \"OpenStreetMap.DE\"))+\n  mapview(np_boundary,alpha.regions = 0.2, aplha = 1)",
-    "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Collection of training data for remote sensing modelling based on spectral variability"
-    ]
-  },
-  {
-    "objectID": "block1_magdon/02_ValidationDataCollection.html",
-    "href": "block1_magdon/02_ValidationDataCollection.html",
-    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
-    "section": "",
-    "text": "rm(list=ls())\nlibrary(sf)\n\nLinking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE\n\nlibrary(terra)\n\nterra 1.8.60\n\nlibrary(ggplot2)\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\ndata_dir=paste0(find_rstudio_root_file(),\"/block1_magdon/data/\")",
-    "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Validation of continuous maps using design-based sampling methods"
-    ]
-  },
-  {
-    "objectID": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
-    "href": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
-    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
-    "section": "Systematic sample to collect reference data for map validation",
-    "text": "Systematic sample to collect reference data for map validation\nTo validate the map we use a systematic sample grid. In a real world application we do not know the true population values. Therefore, field work would be needed to collect reference data at the selected sample points. In this workshop we assume that the agp_pop map represents the true value without any errors. Thus, we don’t need to go to field but we can sample the data by extracting the true values from the map at the sample locations.\n\n# we will use n=100 sample plots\nn=100\np1 = sf::st_sample(np_boundary,size=n,type='regular')\n\nggplot()+geom_sf(data=np_boundary,fill=NA)+\n  geom_sf(data=p1)\n\n\n\n\n\n\n\n\nAt each sample point we extract the predicted and observed AGB value.\n\nobs &lt;- terra::extract(agb_pop,vect(p1))\nnames(obs)&lt;-c('ID','obs')\n\npred &lt;- terra::extract(agb_model,vect(p1))\nnames(pred)&lt;-c('ID','pred')\nvalidation&lt;-data.frame(observed=obs$obs, predicted=pred$pred)\n\n# we need to remove the na values from this dataframe. In real world applications\n# such NA values can,  occur for example at inaccessible field plots.\n\nvalidation&lt;-validation[complete.cases(validation),]",
-    "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Validation of continuous maps using design-based sampling methods"
-    ]
-  },
-  {
-    "objectID": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
-    "href": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
-    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
-    "section": "Assessment of the ABG-model performance",
-    "text": "Assessment of the ABG-model performance\n\nggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')\n\n\n\n\n\n\n\n\n\nSample RMSE\nAgain we can use the RMSE to express the mean difference between observed and predicted AGB.\n\nRMSE_sample = sqrt(sum((validation$observed-validation$predicted)^2)/nrow(validation))\n\nThe sample RMSE is 38.89* t/ha. To better compare the values between different target variables and models is can also express as a proportion relative to the mean value of the predictions.\n\nrRMSE = RMSE_sample/mean(validation$predicted)\n\nOn average we expect that the AGB estimate of our model has an error of 24.1 %.\n\n\nError distribution\nBut is this RMSE valid for the entire range of the observed values or do we expect higher errors for higher AGB values?\nTo see how the model performs over target value range we can use the following analysis plots.\n\nvalidation$resid&lt;-validation$observed-validation$predicted\n\np1&lt;-ggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')+\n  xlim(0,250)+ylim(0,250)+\n  geom_abline(slope=1,intercept = 0)+\n  stat_summary(fun.data= mean_cl_normal) + \n  geom_smooth(method='lm')\n\n\n\np2&lt;-ggplot(data=validation,aes(x=observed, y=resid))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Residuals')+\n  xlim(0,250)+ylim(-50,+50)+\n  geom_abline(slope=0,intercept = 1)\n\np3&lt;-ggplot(data=validation,aes(x=resid))+\n  geom_histogram(aes(y=..density..),fill='grey',binwidth=10)+\n  xlab('Observed AGB t/ha')+ylab('Density')+\n  xlim(-150,150)+\n  stat_function(fun = dnorm, geom=\"polygon\",args = list(mean = mean(validation$resid), sd = sd(validation$resid)),color='blue',alpha=0.4,fill='blue')+\n  geom_vline(xintercept=0,color='blue')+\n  geom_vline(xintercept=mean(validation$resid),color='red')\np1+p2+p3+plot_layout(ncol=3)\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_summary()`).\n\n\nWarning: Computation failed in `stat_summary()`.\nCaused by error in `fun.data()`:\n! The package \"Hmisc\" is required.\n\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_smooth()`).\n\n\nWarning: Removed 1 row containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: Removed 18 rows containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.\nℹ Please use `after_stat(density)` instead.\n\n\nWarning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_bar()`).",
-    "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Validation of continuous maps using design-based sampling methods"
-    ]
-  },
-  {
-    "objectID": "block6/index.html",
-    "href": "block6/index.html",
-    "title": "Materials",
-    "section": "",
-    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.\n\n\n\nParticipants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)\n\n\n\nThe slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
-    "crumbs": [
-      "Block 5: Understanding spatial patterns: how to measure and compare them",
-      "Materials"
-    ]
-  },
-  {
-    "objectID": "block6/index.html#slides",
-    "href": "block6/index.html#slides",
-    "title": "Materials",
-    "section": "",
-    "text": "The workshop slides are at https://jakubnowosad.com/eon2025/.",
-    "crumbs": [
-      "Block 5: Understanding spatial patterns: how to measure and compare them",
-      "Materials"
-    ]
-  },
-  {
-    "objectID": "block6/index.html#prerequisites",
-    "href": "block6/index.html#prerequisites",
-    "title": "Materials",
-    "section": "",
-    "text": "Participants are expected to have a working recent version of R and RStudio installed, along with several R packages listed below.\n\nR: https://cloud.r-project.org/\nRStudio: https://posit.co/download/rstudio-desktop/#download\n\ninstall.packages(\"remotes\")\npkg_list = c(\"terra\", \"sf\", \"landscapemetrics\", \"motif\", \"tidyr\", \"dplyr\")\nremotes::install_cran(pkg_list)",
-    "crumbs": [
-      "Block 5: Understanding spatial patterns: how to measure and compare them",
-      "Materials"
-    ]
-  },
-  {
-    "objectID": "block6/index.html#exercises",
-    "href": "block6/index.html#exercises",
-    "title": "Materials",
-    "section": "",
-    "text": "The slides are accompanied by practical exercises. The best way to get them is to download the exercises repository as a ZIP file from https://github.com/Nowosad/eon2025-exercises/archive/refs/heads/main.zip and unpack it on your computer. Then, you can open the .Rproj file and start working on the exercises in RStudio.",
-    "crumbs": [
-      "Block 5: Understanding spatial patterns: how to measure and compare them",
-      "Materials"
+      "Welcome",
+      "Welcome EON Summer School 2025 (31.08-05.09.2025)"
     ]
   }
 ]
