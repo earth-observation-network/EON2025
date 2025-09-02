@@ -54,7 +54,7 @@ website:
           - mc_session/mc3.qmd
           - mc_session/mc4.qmd
       - text: "---"
-      - section: "Block 5: Understanding spatial patterns: how to measure and compare them"
+      - section: "Block 5: Spatial patterns"
         contents:
           - block6/index.qmd
 
