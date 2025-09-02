@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 # Slides and data
-Slides and data are on https://github.com/earth-observation-network/EON2025/ml_session
+Slides and data are on https://github.com/earth-observation-network/EON2025/tree/main/ml_session
 
 
 # Introduction
