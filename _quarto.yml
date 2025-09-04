@@ -1,9 +1,11 @@
 project: 
   type: website
   output-dir: docs/
-  resources: "block4_5/swiss_models_one_legend_bluewhite.html"
+  resources: "block4_5/**"
   render:
   - "*.qmd"
+
+ 
 
 execute:
   freeze: true

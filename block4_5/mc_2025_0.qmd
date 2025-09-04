@@ -9,9 +9,8 @@ format:
     number-sections: false
     code-fold: true
     df-print: paged
-    embed-resources: true
-editor_options: 
-  chunk_output_type: console
+    embed-resources: false
+
 ---
 
 ## Why do we want to fill spatial gaps?
@@ -222,14 +221,19 @@ Add this right after **Generalized Additive Model (GAM)**:
 * **Directional/channelized processes:** Use anisotropic/cost-based metrics in the residual stage.
 * **Rich covariates, nonlinear effects**: GAM or RF (prefer RF when interactions dominate; add residual kriging if spatial correlation persists).
 
+
 The map at <http://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html> contrasts six interpolation methods for precipitation in
 Switzerland (plus the Voronoi tessellation for reference).
 
-<div>
-<iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe>
-</div>
 
-<iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe>
+
+```{=html}
+<iframe src="../block4_5/swiss_models_one_legend_bluewhite.html"
+        width="780" height="700" style="border:0;" loading="lazy"></iframe>
+```
+
+
+
 
 <figure>
 <figcaption>

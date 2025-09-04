@@ -6,7 +6,7 @@ register_scenario <- function(name, path) {
   scen_registry[[name]] <<- normalizePath(path, winslash = "/", mustWork = TRUE)
 }
 
-register_all_scenarios <- function(dir = here::here("block4_5/scenarios")) {
+register_all_scenarios <- function(dir = here::here("scenarios")) {
   files <- list.files(dir, pattern = "\\.R$", full.names = TRUE)
   for (f in files) {
     env <- new.env(parent = emptyenv())
@@ -28,6 +28,6 @@ source_scenario <- function(name) {
 }
 
 # Beispiel-Registrierungen:
-register_scenario("lake_bump_dense",  here::here("block4_5/scenarios/lake_bump_dense.R"))
-register_scenario("scen_scaled_demo", here::here("block4_5/scenarios/scen_scaled_demo.R"))
+register_scenario("lake_bump_dense",  here::here("scenarios/lake_bump_dense.R"))
+register_scenario("scen_scaled_demo", here::here("scenarios/scen_scaled_demo.R"))
 # oder: register_all_scenarios()
