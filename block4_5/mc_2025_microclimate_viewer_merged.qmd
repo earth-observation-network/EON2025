@@ -11,10 +11,6 @@ format:
     number-sections: true
     code-fold: false
     code-tools: true
-  pdf:
-    documentclass: scrreprt
-    toc: true
-    number-sections: true
 execute:
   warning: true
   message: true
