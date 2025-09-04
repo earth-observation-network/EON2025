@@ -35,7 +35,7 @@ visible and testable:
 You can sample synthetic stations, train interpolators (IDW, Kriging
 variants, RF, GAM), and assess them with **spatial LBO-CV**.
 
-![](images/pipe.png)
+![](pipe.png)
 
 ## What the `pipemodel` is
 
