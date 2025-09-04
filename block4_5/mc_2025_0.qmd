@@ -225,6 +225,9 @@ Add this right after **Generalized Additive Model (GAM)**:
 The figure below contrasts six interpolation methods for precipitation in
 Switzerland (plus the Voronoi tessellation for reference).
 
+```{=html}
+<iframe width="780" height="700" src="http://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe>
+```
 
 ```{=html}
 <iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html"></iframe>
