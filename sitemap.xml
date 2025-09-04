@@ -2,26 +2,54 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/ml_session/ML_AOA.html</loc>
-    <lastmod>2025-09-02T18:14:03.642Z</lastmod>
+    <lastmod>2025-09-04T01:59:02.313Z</lastmod>
   </url>
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/block6/index.html</loc>
-    <lastmod>2025-09-02T18:14:03.602Z</lastmod>
+    <lastmod>2025-09-04T01:59:02.105Z</lastmod>
   </url>
   <url>
-    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection.html</loc>
-    <lastmod>2025-09-02T18:14:03.542Z</lastmod>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_pipemodel_explain.html</loc>
+    <lastmod>2025-09-04T01:59:02.088Z</lastmod>
   </url>
   <url>
-    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/01_TrainingDataCollection.html</loc>
-    <lastmod>2025-09-02T18:14:03.542Z</lastmod>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_microclimate_viewer_merged.html</loc>
+    <lastmod>2025-09-04T01:59:02.086Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_1.html</loc>
+    <lastmod>2025-09-04T01:59:02.086Z</lastmod>
   </url>
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/block2_bas_dob/lidar_forest_structure.html</loc>
-    <lastmod>2025-09-02T18:14:03.544Z</lastmod>
+    <lastmod>2025-09-04T01:59:01.678Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/01_TrainingDataCollection.html</loc>
+    <lastmod>2025-09-04T01:59:01.676Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block1_magdon/02_ValidationDataCollection.html</loc>
+    <lastmod>2025-09-04T01:59:01.676Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_0.html</loc>
+    <lastmod>2025-09-04T01:59:02.085Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_data.html</loc>
+    <lastmod>2025-09-04T01:59:02.086Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_pipemodel.html</loc>
+    <lastmod>2025-09-04T01:59:02.087Z</lastmod>
+  </url>
+  <url>
+    <loc>https://earth-observation-network.github.io/EON2025/block4_5/mc_2025_tec.html</loc>
+    <lastmod>2025-09-04T01:59:02.088Z</lastmod>
   </url>
   <url>
     <loc>https://earth-observation-network.github.io/EON2025/index.html</loc>
-    <lastmod>2025-09-02T18:14:03.613Z</lastmod>
+    <lastmod>2025-09-04T01:59:02.285Z</lastmod>
   </url>
 </urlset>
