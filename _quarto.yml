@@ -48,6 +48,7 @@ website:
       - section: "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation"
         contents:
           - block4_5/mc_2025_0.qmd
+          - block4_5/swiss_models_one_legend_bluewhite.html
           - block4_5/mc_2025_1.qmd
           - block4_5/mc_2025_microclimate_viewer_merged.qmd
           - block4_5/mc_2025_tec.qmd
