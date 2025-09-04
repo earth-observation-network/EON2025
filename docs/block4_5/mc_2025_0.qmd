@@ -23,7 +23,7 @@ Lets look at our project region.
 
 
 
-![Polsterhaus excursion research area stations 2023 (stars) 2024 (crosses)](rgb_hub_stations.png)
+  ![Polsterhaus excursion research area stations 2023 (stars) 2024 (crosses)](images/rgb_hub_stations.png)
 
 ## Distance and data representation
 
