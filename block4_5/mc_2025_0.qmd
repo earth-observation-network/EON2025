@@ -5,7 +5,6 @@ author: Chris Reudenbach, Philipps University Marburg (PUM)
 date: "2025-08-30"
 format:
   html:
-    title-block-banner: ../images/mc3.png
     toc: true
     number-sections: false
     code-fold: true
