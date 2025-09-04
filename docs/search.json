@@ -899,5 +899,27 @@
       "Welcome",
       "Welcome EON Summer School 2025 (31.08-05.09.2025)"
     ]
+  },
+  {
+    "objectID": "block4_5/mc_2025_data.html",
+    "href": "block4_5/mc_2025_data.html",
+    "title": "Data Sources",
+    "section": "",
+    "text": "Download the exercises repository (as a ZIP), then unpack it locally. Open the .Rproj in RStudio and start with the provided exercises.",
+    "crumbs": [
+      "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation",
+      "Data Sources"
+    ]
+  },
+  {
+    "objectID": "block4_5/mc_2025_data.html#tutorial-data",
+    "href": "block4_5/mc_2025_data.html#tutorial-data",
+    "title": "Data Sources",
+    "section": "",
+    "text": "Download the exercises repository (as a ZIP), then unpack it locally. Open the .Rproj in RStudio and start with the provided exercises.",
+    "crumbs": [
+      "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation",
+      "Data Sources"
+    ]
   }
 ]
