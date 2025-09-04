@@ -8,8 +8,9 @@ execute:
   freeze: true
 
 website:
+  bread-crumbs: false
   open-graph: true
-  page-navigation: true  
+  page-navigation: false 
   title: "EON Summer School 2025"
   site-url: https://earth-observation-network.github.io/EON2025
   repo-url: https://github.com/earth-observation-network/EON2025
@@ -44,16 +45,14 @@ website:
       - section: "Block 3: Machine Learning"
         contents:
           - ml_session/ML_AOA.qmd
-          # - href: https://gisma-courses.github.io/LV-uav-workflow/modules/module-introduction/
-          #   text: Basic Readings        
-          # - href: https://gisma-courses.github.io/LV-uav-workflow/modules/module-fieldwork/
-          #   text: uav/Flight Planning
       - text: "---"
       - section: "Block 4 and 5: Microclimate Data Retrieval & Spatial Data Interpolation"
         contents:
-          - mc_session/mc1.qmd
-          - mc_session/mc3.qmd
-          - mc_session/mc4.qmd
+          - block4_5/mc_2025_0.qmd
+          - block4_5/mc_2025_1.qmd
+          - block4_5/mc_2025_microclimate_viewer_merged.qmd
+          - block4_5/mc_2025_tec.qmd
+          - block4_5/mc_2025_data.qmd
       - text: "---"
       - section: "Block 6: Understanding spatial patterns: how to measure and compare them"
         contents:
