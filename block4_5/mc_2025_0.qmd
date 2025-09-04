@@ -10,6 +10,7 @@ format:
     number-sections: false
     code-fold: true
     df-print: paged
+    embed-resources: true
 editor_options: 
   chunk_output_type: console
 ---
@@ -254,7 +255,7 @@ Think in terms of the **process** you want to capture and the **scale** at which
 ## Hands‑on: our data
 
 Download the
-[exercises repository](https://github.com/gisma-courses/eon2024-mc/blob/master/Archiv_EON2024_Interpol.zip)
+[exercises repository](https://next.hessenbox.de/index.php/s/c749MW3esYBqgTQ)
 (as a ZIP), then unpack it locally. Open the `.Rproj` in **RStudio** and start
 with the provided exercises.
 
