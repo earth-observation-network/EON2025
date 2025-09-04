@@ -499,6 +499,39 @@
     ]
   },
   {
+    "objectID": "block1_magdon/02_ValidationDataCollection.html",
+    "href": "block1_magdon/02_ValidationDataCollection.html",
+    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "section": "",
+    "text": "rm(list=ls())\nlibrary(sf)\n\nLinking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE\n\nlibrary(terra)\n\nterra 1.8.60\n\nlibrary(ggplot2)\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\ndata_dir=paste0(find_rstudio_root_file(),\"/block1_magdon/data/\")",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Validation of continuous maps using design-based sampling methods"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
+    "href": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
+    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "section": "Systematic sample to collect reference data for map validation",
+    "text": "Systematic sample to collect reference data for map validation\nTo validate the map we use a systematic sample grid. In a real world application we do not know the true population values. Therefore, field work would be needed to collect reference data at the selected sample points. In this workshop we assume that the agp_pop map represents the true value without any errors. Thus, we don’t need to go to field but we can sample the data by extracting the true values from the map at the sample locations.\n\n# we will use n=100 sample plots\nn=100\np1 = sf::st_sample(np_boundary,size=n,type='regular')\n\nggplot()+geom_sf(data=np_boundary,fill=NA)+\n  geom_sf(data=p1)\n\n\n\n\n\n\n\n\nAt each sample point we extract the predicted and observed AGB value.\n\nobs &lt;- terra::extract(agb_pop,vect(p1))\nnames(obs)&lt;-c('ID','obs')\n\npred &lt;- terra::extract(agb_model,vect(p1))\nnames(pred)&lt;-c('ID','pred')\nvalidation&lt;-data.frame(observed=obs$obs, predicted=pred$pred)\n\n# we need to remove the na values from this dataframe. In real world applications\n# such NA values can,  occur for example at inaccessible field plots.\n\nvalidation&lt;-validation[complete.cases(validation),]",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Validation of continuous maps using design-based sampling methods"
+    ]
+  },
+  {
+    "objectID": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
+    "href": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
+    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "section": "Assessment of the ABG-model performance",
+    "text": "Assessment of the ABG-model performance\n\nggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')\n\n\n\n\n\n\n\n\n\nSample RMSE\nAgain we can use the RMSE to express the mean difference between observed and predicted AGB.\n\nRMSE_sample = sqrt(sum((validation$observed-validation$predicted)^2)/nrow(validation))\n\nThe sample RMSE is 38.89* t/ha. To better compare the values between different target variables and models is can also express as a proportion relative to the mean value of the predictions.\n\nrRMSE = RMSE_sample/mean(validation$predicted)\n\nOn average we expect that the AGB estimate of our model has an error of 24.1 %.\n\n\nError distribution\nBut is this RMSE valid for the entire range of the observed values or do we expect higher errors for higher AGB values?\nTo see how the model performs over target value range we can use the following analysis plots.\n\nvalidation$resid&lt;-validation$observed-validation$predicted\n\np1&lt;-ggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')+\n  xlim(0,250)+ylim(0,250)+\n  geom_abline(slope=1,intercept = 0)+\n  stat_summary(fun.data= mean_cl_normal) + \n  geom_smooth(method='lm')\n\n\n\np2&lt;-ggplot(data=validation,aes(x=observed, y=resid))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Residuals')+\n  xlim(0,250)+ylim(-50,+50)+\n  geom_abline(slope=0,intercept = 1)\n\np3&lt;-ggplot(data=validation,aes(x=resid))+\n  geom_histogram(aes(y=..density..),fill='grey',binwidth=10)+\n  xlab('Observed AGB t/ha')+ylab('Density')+\n  xlim(-150,150)+\n  stat_function(fun = dnorm, geom=\"polygon\",args = list(mean = mean(validation$resid), sd = sd(validation$resid)),color='blue',alpha=0.4,fill='blue')+\n  geom_vline(xintercept=0,color='blue')+\n  geom_vline(xintercept=mean(validation$resid),color='red')\np1+p2+p3+plot_layout(ncol=3)\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_summary()`).\n\n\nWarning: Computation failed in `stat_summary()`.\nCaused by error in `fun.data()`:\n! The package \"Hmisc\" is required.\n\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_smooth()`).\n\n\nWarning: Removed 1 row containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: Removed 18 rows containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.\nℹ Please use `after_stat(density)` instead.\n\n\nWarning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_bar()`).",
+    "crumbs": [
+      "Block 1: Reference Data Collection",
+      "Validation of continuous maps using design-based sampling methods"
+    ]
+  },
+  {
     "objectID": "block1_magdon/01_TrainingDataCollection.html",
     "href": "block1_magdon/01_TrainingDataCollection.html",
     "title": "Collection of training data for remote sensing model building",
@@ -543,36 +576,91 @@
     ]
   },
   {
-    "objectID": "block1_magdon/02_ValidationDataCollection.html",
-    "href": "block1_magdon/02_ValidationDataCollection.html",
-    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
+    "objectID": "block2_bas_dob/Box dimension.html",
+    "href": "block2_bas_dob/Box dimension.html",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
     "section": "",
-    "text": "rm(list=ls())\nlibrary(sf)\n\nLinking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE\n\nlibrary(terra)\n\nterra 1.8.60\n\nlibrary(ggplot2)\nlibrary(rprojroot)\nlibrary(patchwork)\n\n\nAttache Paket: 'patchwork'\n\n\nDas folgende Objekt ist maskiert 'package:terra':\n\n    area\n\ndata_dir=paste0(find_rstudio_root_file(),\"/block1_magdon/data/\")",
+    "text": "Clouds are not spheres, mountains are not cones, coastlines are not circles, and bark is not smooth, nor does lightning travel in a straight line.” - Mandelbrot (1983)\nA fractal is a geometric object that shows self-similarity; its parts resemble the whole, no matter the scale of observation. Imagine zooming in on a fern leaf, a coastline, or a broccoli head: at each magnification, similar patterns reappear. Unlike simple geometric figures, fractals are irregular and infinitely nested in structure. They are found widely in nature and are best described not by whole-number dimensions (like 1D lines or 2D surfaces), but by fractional, non-integer dimensions, known as the fractal dimension. This dimension is crucial for quantifying the complexity of self-similar systems, whether exact (mathematical fractals) or statistical (natural systems).\n\n\n\nKoch Curve\n\n\n\n\n\nSierpinski triangle\n\n\n\n\nThe fractal dimension quantifies how complex and space-filling a pattern is. Unlike familiar Euclidean dimensions (1D for a line, 2D for a surface), fractal dimensions can take non-integer values between whole numbers.\nSeveral methods exist to estimate fractal dimension, but the box-counting method is the most widely used. In this approach, the object is covered with boxes of a certain size, and the number of boxes required to contain the shape is counted. This process is repeated with progressively smaller boxes.\nIf the logarithm of the number of boxes is plotted against the logarithm of the box size, the result is typically a straight line. The slope of this line gives the fractal dimension: steeper slopes correspond to more intricate, space-filling structures.\n\n\n\nBecause trees are fractal structures.\n\n\n\nTrees are fractals\n\n\nTrees exhibit self-similar branching patterns: smaller branches resemble the overall structure of the tree. While we can measure conventional forestry attributes such as height, DBH, basal area, crown dimensions, and volume, these do not capture overall structural complexity. To do this, we turn to fractal analysis—specifically the box dimension.\n\n\n\n\n0-D: point\n\n1-D: line\n\n2-D: plane/filled region\n\n3-D: solid volume\n\nFractal dimension fills the gaps between integers and quantifies how space-filling a structure is.\n\nA classic example is the Menger sponge, which has a box dimension ≈ 2.7268. Despite its infinite surface area, it has zero volume, an extreme case of fractal geometry.\n\n\n\nThe box dimension is a method of fractal analysis used to quantify the structural complexity of an object, often derived from 3D point cloud data. The idea is simple:\n- Cover the object with boxes of decreasing size.\n- Count how many boxes are required to contain the shape.\n- Plot the logarithm of the box count against the logarithm of box size.\nIf the relationship is linear, the slope of that line gives the box dimension.\n\n\n\nSeidel et al 2019\n\n\nFormally, if the box size is \\((\\varepsilon)\\) and the number of occupied boxes is \\(N(\\varepsilon)\\):\n\\[\nN(\\varepsilon) \\propto \\varepsilon^{-D_b}\n\\quad\\Rightarrow\\quad\n\\log N(\\varepsilon) = D_b \\,\\log(1/\\varepsilon) + c\n\\]\nWhere: - \\((D_b)\\) is the box dimension.\n- For 3D point clouds:\n- \\((D_b \\approx 1)\\): line-like structures\n- \\((D_b \\approx 2)\\): sheet-like structures\n- \\((D_b \\approx 3)\\): volume-filling structures\n- Trees typically have \\((D_b)\\) between 1.0 and 2.2 (method and data dependent).\n- A higher \\(R^2\\) of the fit indicates stronger self-similarity across scales.\n\n\nBox dimension estimates depend on: 1. Point density/resolution\n2. Occlusion or shadowing\n3. Extent of the scanned scene\n4. Scale interval chosen for fitting\nHigh-quality point clouds (low occlusion, ~0–1 cm spacing) are optimal for robust estimates.\n\n\n\nIn practice, box-counting in 3D is implemented as voxel counting. Voxels are the 3D equivalent of pixels, small cubic volume elements. A point cloud is discretized into a voxel grid, and the occupied voxels are counted at multiple scales.\n\n\n\nSource Seidel et al (2020)\n\n\nThis process converts a 3D model or point cloud into a grid of voxels, each labeled as “occupied” or “empty.”\n\n\n\nSource: Dorji et al (2021)\n\n\n\n\n\n\nBox dimension ranges from 1 (line) to 3 (solid cube).\n\nA dimension of 2.72 corresponds to the Menger sponge (infinite surface, zero volume).\n\nMost trees fall between 1.0 and 2.2, reflecting their branching complexity.\n\nLow resolution → oversimplification (underestimates (\\(D_b\\))).\n\nHigh occlusion → too few boxes at small scales (also biases (\\(D_b\\))).\n\nThus, careful preprocessing and high-quality scans are critical for meaningful box-dimension analysis.\n\n\n\n\nTo apply this concept to forests, we calculate the box-dimension (\\((D_b\\)) as a measure of tree or stand structural complexity using the rTwig package in R.\nThe algorithm for \\((D_b)\\) was developed initially in Mathematica (Wolfram Research, Champaign, IL, USA) (Seidel, 2018; Ehbrecht, 2019; Basnet, 2025). It integrates all elements of a scanned scene into a single value, thereby fully leveraging the potential of 3D laser scanning.\nIn short:\n- The point cloud of a tree or stand is enclosed in boxes of decreasing size.\n- For each box size, the number of occupied boxes is counted.\n- The scaling relationship between box size and number of boxes gives the box dimension $(D_b$).\nThis workflow is implemented in the rTwig R package, making it straightforward to estimate structural complexity directly from normalized point cloud data.\n\n\n\nThe rTwig package provides the function box_dimension() to calculate the fractal box dimension ($(D_b$)) from a 3D point cloud.\nUsage\nbox_dimension(cloud, lowercutoff = 0.01, rm_int_box = FALSE, plot = FALSE)\nArguments\ncloud: A point cloud matrix n*3 (X, Y, Z). Non-matrices are automatically converted to a matrix\nlowercutoff: The smallest box size determined by the point scaping of the cloud in meters. Defaults to 1 cm\nrm_int_box: Logical, whether to remove the initial (largest) box from the fit. Defaults to FALSE.\nplot: Visualization options: “2D”, “3D”, or “ALL”. FALSE disables plotting. Default is FALSE.",
     "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Validation of continuous maps using design-based sampling methods"
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
     ]
   },
   {
-    "objectID": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
-    "href": "block1_magdon/02_ValidationDataCollection.html#systematic-sample-to-collect-reference-data-for-map-validation",
-    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
-    "section": "Systematic sample to collect reference data for map validation",
-    "text": "Systematic sample to collect reference data for map validation\nTo validate the map we use a systematic sample grid. In a real world application we do not know the true population values. Therefore, field work would be needed to collect reference data at the selected sample points. In this workshop we assume that the agp_pop map represents the true value without any errors. Thus, we don’t need to go to field but we can sample the data by extracting the true values from the map at the sample locations.\n\n# we will use n=100 sample plots\nn=100\np1 = sf::st_sample(np_boundary,size=n,type='regular')\n\nggplot()+geom_sf(data=np_boundary,fill=NA)+\n  geom_sf(data=p1)\n\n\n\n\n\n\n\n\nAt each sample point we extract the predicted and observed AGB value.\n\nobs &lt;- terra::extract(agb_pop,vect(p1))\nnames(obs)&lt;-c('ID','obs')\n\npred &lt;- terra::extract(agb_model,vect(p1))\nnames(pred)&lt;-c('ID','pred')\nvalidation&lt;-data.frame(observed=obs$obs, predicted=pred$pred)\n\n# we need to remove the na values from this dataframe. In real world applications\n# such NA values can,  occur for example at inaccessible field plots.\n\nvalidation&lt;-validation[complete.cases(validation),]",
+    "objectID": "block2_bas_dob/Box dimension.html#how-do-you-measure-the-fractal-dimension",
+    "href": "block2_bas_dob/Box dimension.html#how-do-you-measure-the-fractal-dimension",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "",
+    "text": "The fractal dimension quantifies how complex and space-filling a pattern is. Unlike familiar Euclidean dimensions (1D for a line, 2D for a surface), fractal dimensions can take non-integer values between whole numbers.\nSeveral methods exist to estimate fractal dimension, but the box-counting method is the most widely used. In this approach, the object is covered with boxes of a certain size, and the number of boxes required to contain the shape is counted. This process is repeated with progressively smaller boxes.\nIf the logarithm of the number of boxes is plotted against the logarithm of the box size, the result is typically a straight line. The slope of this line gives the fractal dimension: steeper slopes correspond to more intricate, space-filling structures.",
     "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Validation of continuous maps using design-based sampling methods"
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
     ]
   },
   {
-    "objectID": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
-    "href": "block1_magdon/02_ValidationDataCollection.html#assessment-of-the-abg-model-performance",
-    "title": "Collection of validation data in the context of remote sensing based forest monitoring",
-    "section": "Assessment of the ABG-model performance",
-    "text": "Assessment of the ABG-model performance\n\nggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')\n\n\n\n\n\n\n\n\n\nSample RMSE\nAgain we can use the RMSE to express the mean difference between observed and predicted AGB.\n\nRMSE_sample = sqrt(sum((validation$observed-validation$predicted)^2)/nrow(validation))\n\nThe sample RMSE is 38.89* t/ha. To better compare the values between different target variables and models is can also express as a proportion relative to the mean value of the predictions.\n\nrRMSE = RMSE_sample/mean(validation$predicted)\n\nOn average we expect that the AGB estimate of our model has an error of 24.1 %.\n\n\nError distribution\nBut is this RMSE valid for the entire range of the observed values or do we expect higher errors for higher AGB values?\nTo see how the model performs over target value range we can use the following analysis plots.\n\nvalidation$resid&lt;-validation$observed-validation$predicted\n\np1&lt;-ggplot(data=validation,aes(x=observed, y=predicted))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Predicted AGB t/ha')+\n  xlim(0,250)+ylim(0,250)+\n  geom_abline(slope=1,intercept = 0)+\n  stat_summary(fun.data= mean_cl_normal) + \n  geom_smooth(method='lm')\n\n\n\np2&lt;-ggplot(data=validation,aes(x=observed, y=resid))+\n  geom_point(alpha=0.5)+\n  xlab('Observed AGB t/ha')+ylab('Residuals')+\n  xlim(0,250)+ylim(-50,+50)+\n  geom_abline(slope=0,intercept = 1)\n\np3&lt;-ggplot(data=validation,aes(x=resid))+\n  geom_histogram(aes(y=..density..),fill='grey',binwidth=10)+\n  xlab('Observed AGB t/ha')+ylab('Density')+\n  xlim(-150,150)+\n  stat_function(fun = dnorm, geom=\"polygon\",args = list(mean = mean(validation$resid), sd = sd(validation$resid)),color='blue',alpha=0.4,fill='blue')+\n  geom_vline(xintercept=0,color='blue')+\n  geom_vline(xintercept=mean(validation$resid),color='red')\np1+p2+p3+plot_layout(ncol=3)\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_summary()`).\n\n\nWarning: Computation failed in `stat_summary()`.\nCaused by error in `fun.data()`:\n! The package \"Hmisc\" is required.\n\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\nWarning: Removed 1 row containing non-finite outside the scale range\n(`stat_smooth()`).\n\n\nWarning: Removed 1 row containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: Removed 18 rows containing missing values or values outside the scale range\n(`geom_point()`).\n\n\nWarning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.\nℹ Please use `after_stat(density)` instead.\n\n\nWarning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_bar()`).",
+    "objectID": "block2_bas_dob/Box dimension.html#why-are-we-discussing-this-here",
+    "href": "block2_bas_dob/Box dimension.html#why-are-we-discussing-this-here",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "",
+    "text": "Because trees are fractal structures.\n\n\n\nTrees are fractals\n\n\nTrees exhibit self-similar branching patterns: smaller branches resemble the overall structure of the tree. While we can measure conventional forestry attributes such as height, DBH, basal area, crown dimensions, and volume, these do not capture overall structural complexity. To do this, we turn to fractal analysis—specifically the box dimension.",
     "crumbs": [
-      "Block 1: Reference Data Collection",
-      "Validation of continuous maps using design-based sampling methods"
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
+    ]
+  },
+  {
+    "objectID": "block2_bas_dob/Box dimension.html#from-euclidean-to-fractal-dimension-quick-intuition",
+    "href": "block2_bas_dob/Box dimension.html#from-euclidean-to-fractal-dimension-quick-intuition",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "",
+    "text": "0-D: point\n\n1-D: line\n\n2-D: plane/filled region\n\n3-D: solid volume\n\nFractal dimension fills the gaps between integers and quantifies how space-filling a structure is.\n\nA classic example is the Menger sponge, which has a box dimension ≈ 2.7268. Despite its infinite surface area, it has zero volume, an extreme case of fractal geometry.",
+    "crumbs": [
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
+    ]
+  },
+  {
+    "objectID": "block2_bas_dob/Box dimension.html#box-dimension",
+    "href": "block2_bas_dob/Box dimension.html#box-dimension",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "",
+    "text": "The box dimension is a method of fractal analysis used to quantify the structural complexity of an object, often derived from 3D point cloud data. The idea is simple:\n- Cover the object with boxes of decreasing size.\n- Count how many boxes are required to contain the shape.\n- Plot the logarithm of the box count against the logarithm of box size.\nIf the relationship is linear, the slope of that line gives the box dimension.\n\n\n\nSeidel et al 2019\n\n\nFormally, if the box size is \\((\\varepsilon)\\) and the number of occupied boxes is \\(N(\\varepsilon)\\):\n\\[\nN(\\varepsilon) \\propto \\varepsilon^{-D_b}\n\\quad\\Rightarrow\\quad\n\\log N(\\varepsilon) = D_b \\,\\log(1/\\varepsilon) + c\n\\]\nWhere: - \\((D_b)\\) is the box dimension.\n- For 3D point clouds:\n- \\((D_b \\approx 1)\\): line-like structures\n- \\((D_b \\approx 2)\\): sheet-like structures\n- \\((D_b \\approx 3)\\): volume-filling structures\n- Trees typically have \\((D_b)\\) between 1.0 and 2.2 (method and data dependent).\n- A higher \\(R^2\\) of the fit indicates stronger self-similarity across scales.\n\n\nBox dimension estimates depend on: 1. Point density/resolution\n2. Occlusion or shadowing\n3. Extent of the scanned scene\n4. Scale interval chosen for fitting\nHigh-quality point clouds (low occlusion, ~0–1 cm spacing) are optimal for robust estimates.\n\n\n\nIn practice, box-counting in 3D is implemented as voxel counting. Voxels are the 3D equivalent of pixels, small cubic volume elements. A point cloud is discretized into a voxel grid, and the occupied voxels are counted at multiple scales.\n\n\n\nSource Seidel et al (2020)\n\n\nThis process converts a 3D model or point cloud into a grid of voxels, each labeled as “occupied” or “empty.”\n\n\n\nSource: Dorji et al (2021)\n\n\n\n\n\n\nBox dimension ranges from 1 (line) to 3 (solid cube).\n\nA dimension of 2.72 corresponds to the Menger sponge (infinite surface, zero volume).\n\nMost trees fall between 1.0 and 2.2, reflecting their branching complexity.\n\nLow resolution → oversimplification (underestimates (\\(D_b\\))).\n\nHigh occlusion → too few boxes at small scales (also biases (\\(D_b\\))).\n\nThus, careful preprocessing and high-quality scans are critical for meaningful box-dimension analysis.",
+    "crumbs": [
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
+    ]
+  },
+  {
+    "objectID": "block2_bas_dob/Box dimension.html#how-to-measure-it-in-reality",
+    "href": "block2_bas_dob/Box dimension.html#how-to-measure-it-in-reality",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "",
+    "text": "To apply this concept to forests, we calculate the box-dimension (\\((D_b\\)) as a measure of tree or stand structural complexity using the rTwig package in R.\nThe algorithm for \\((D_b)\\) was developed initially in Mathematica (Wolfram Research, Champaign, IL, USA) (Seidel, 2018; Ehbrecht, 2019; Basnet, 2025). It integrates all elements of a scanned scene into a single value, thereby fully leveraging the potential of 3D laser scanning.\nIn short:\n- The point cloud of a tree or stand is enclosed in boxes of decreasing size.\n- For each box size, the number of occupied boxes is counted.\n- The scaling relationship between box size and number of boxes gives the box dimension $(D_b$).\nThis workflow is implemented in the rTwig R package, making it straightforward to estimate structural complexity directly from normalized point cloud data.",
+    "crumbs": [
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
+    ]
+  },
+  {
+    "objectID": "block2_bas_dob/Box dimension.html#rtwig-r-package",
+    "href": "block2_bas_dob/Box dimension.html#rtwig-r-package",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "",
+    "text": "The rTwig package provides the function box_dimension() to calculate the fractal box dimension ($(D_b$)) from a 3D point cloud.\nUsage\nbox_dimension(cloud, lowercutoff = 0.01, rm_int_box = FALSE, plot = FALSE)\nArguments\ncloud: A point cloud matrix n*3 (X, Y, Z). Non-matrices are automatically converted to a matrix\nlowercutoff: The smallest box size determined by the point scaping of the cloud in meters. Defaults to 1 cm\nrm_int_box: Logical, whether to remove the initial (largest) box from the fit. Defaults to FALSE.\nplot: Visualization options: “2D”, “3D”, or “ALL”. FALSE disables plotting. Default is FALSE.",
+    "crumbs": [
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
+    ]
+  },
+  {
+    "objectID": "block2_bas_dob/Box dimension.html#references",
+    "href": "block2_bas_dob/Box dimension.html#references",
+    "title": "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension \\((D_b)\\) from 3D Point Clouds",
+    "section": "References",
+    "text": "References\n\nMandelbrot, B. B. (1983). The Fractal Geometry of Nature. W.H. Freeman.\nSeidel, D. et al. (2019). How a measure of tree structural complexity relates to architectural benefit-to-cost ratio, light availability, and growth of trees. Ecology and Evolution, 9(12), 7134–7142. https://doi.org/10.1002/ece3.5281\nSeidel, D., Annighöfer, P., Ehbrecht, M., Magdon, P., Wöllauer, S., & Ammer, C. (2020). Deriving Stand Structural Complexity from Airborne Laser Scanning Data—What Does It Tell Us about a Forest? Remote Sensing, 12(11), 1854. https://doi.org/10.3390/rs12111854\nDorji, Y., Schuldt, B., Neudam, L., Dorji, R., Middleby, K., Isasa, E., & Körber, K. et al. (2021). Trees, 35(4), 1385–1398. https://doi.org/10.1007/s00468-021-02124-9\nBasnet, P., Das, S., Hölscher, D., Pierick, K., & Seidel, D. (2025). Drivers of forest structural complexity in mountain forests of Nepal. Mountain Research and Development, 45(1), R1–R10. https://doi.org/10.1659/mrd.2024.00009\nrTwig vignette (Box Dimension): https://cran.r-project.org/web/packages/rTwig/vignettes/Box-Dimension.html",
+    "crumbs": [
+      "Block 2: Processing of 3D LiDAR data to assess forest structure",
+      "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
     ]
   },
   {
