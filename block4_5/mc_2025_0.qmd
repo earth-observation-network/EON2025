@@ -229,7 +229,7 @@ Switzerland (plus the Voronoi tessellation for reference).
 <iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe>
 </div>
 
-<iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe>
+<!-- <iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe> -->
 
 <figure>
 <figcaption>
