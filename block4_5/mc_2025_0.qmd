@@ -228,7 +228,7 @@ Switzerland (plus the Voronoi tessellation for reference).
 
 
 ```{=html}
-<iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/block4_5/swiss_models_one_legend_bluewhite.html" title="Voronoi"></iframe>
+<iframe width="780" height="700" src="https://earth-observation-network.github.io/EON2025/blob/main/block4_5/swiss_models_one_legend_bluewhite.html" title="All"></iframe>
 ```
 
 <figure>
