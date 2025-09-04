@@ -41,7 +41,7 @@ website:
       - section: "Block 2: Processing of 3D LiDAR data to assess forest structure"
         contents: 
           - block2_bas_dob/lidar_forest_structure.qmd
-          - block2_bas_dob/Box dimension.md
+          - block2_bas_dob/Box dimension.qmd
       - text: "---"
       - section: "Block 3: Machine Learning"
         contents:
