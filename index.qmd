@@ -46,16 +46,16 @@ comments: false
 -   Thursday (Waldhaus):
     -   09:00-11:00 **Block 4 Measuring and moddeling microclimate with mobile climate stations** (Chris Reudenbach, Uni Marburg)
     -   11:00-12:00 group work
-    -   12:30 Lunch @ Waldhaus
+    -   13:00 Lunch @ Waldhaus
     -   14:00-16:00 **Block 5 Describing and comparing spatial patterns** (Jakub Nowosad, Uni Münster and Adam Mickiewicz Uni)
     -   16:00-18:00 Group work
 
 -   Friday (Waldhaus):
-    -   09:00-10:00 Tidy up rooms
+    -   09:00-10:00 Group work
     -   10:00-11:00 **Final presentations of the group work** (Students)
-    -   11:00-12:00 Check out of the guesthouse
-    -   12:00-13:00 Outside: Workshop closing / evaluation
-    -   14:00 **Departure**
+    -   11:00-11:30 Closing Seminar, Evaluation
+    -   11:30-13:00 Lunch, Tidy up rooms, check out
+    -   13:15 **Departure**
 
 ------------------------------------------------------------------------
 

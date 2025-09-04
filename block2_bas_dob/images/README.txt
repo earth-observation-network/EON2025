@@ -1,0 +1,1 @@
+place images from block 02 in this folder! 

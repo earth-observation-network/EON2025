@@ -1,7 +1,8 @@
 ---
 title: "Processing of 3D Lidar data to assess forest structure"
-author: "Prakash Basnet and Svenja Dobelmann"
+author: "Prakash Basnet and Svenja Dobelmann, [University of Applied Sciences and Arts (HAWK)"
 output: html_document
+date: "2025-08-26"
 ---
 check out the manual of the lidR package: https://r-lidar.github.io/lidRbook/ 
 
@@ -32,17 +33,17 @@ download lidar point cloud and ground truth data (BI) from owncloud.
 ```{r, results='hide', eval=FALSE}
 # Data access
 url_las <- "https://cloud.hawk.de/index.php/s/pB4RRmLb4Xxy4Qj/download"
-download.file(url_las, destfile = "uls_goewa.laz", mode = "wb")
+download.file(url_las, destfile = "data/uls_goewa.laz", mode = "wb")
 
 url_bi <- "https://cloud.hawk.de/index.php/s/5npprfZYLjg5ip5/download"
-download.file(url_bi, destfile = "trees_bi.gpkg", mode = "wb")
+download.file(url_bi, destfile = "data/trees_bi.gpkg", mode = "wb")
 
 ```
 
 ### import the data 
 ```{r, message=FALSE, results='hide'}
-las <- readLAS("uls_goewa.laz")
-trees_bi <- st_read("trees_bi.gpkg")
+las <- readLAS("data/uls_goewa.laz")
+trees_bi <- st_read("data/trees_bi.gpkg")
 ```
 let´s inspect the data. 
 1) whats the point density of the lidar data? 
