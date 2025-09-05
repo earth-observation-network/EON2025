@@ -38,7 +38,7 @@ comments: false
     -   16:00-18:00 Group work
       
 -   Wednesday (Waldhaus & Excursion):
-    -   09:00-13:00h **Excursion to NP-Harz** (Walk & Talk)
+    -   09:00-13:00 **Excursion to NP-Harz** (Walk & Talk)
     -   13:00 Lunch
     -   14:00-16:00 **Block 3 Machine learning and validation** (Hanna Meyer, Uni Münster)
     -   16:00-18:00 Group work
@@ -52,9 +52,9 @@ comments: false
 
 -   Friday (Waldhaus):
     -   09:00-10:00 Group work
-    -   10:00-11:00 **Final presentations of the group work** (Students)
-    -   11:00-11:30 Closing Seminar, Evaluation
-    -   11:30-13:00 Lunch, Tidy up rooms, check out
+    -   10:00-11:30 **Final presentations of the group work** (Students)
+    -   11:30-11:45 Closing Seminar, Evaluation
+    -   11:45-13:00 Lunch, tidy up rooms, check out
     -   13:15 **Departure**
 
 ------------------------------------------------------------------------
