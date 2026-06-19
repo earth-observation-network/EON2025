@@ -38,7 +38,8 @@ about:
 
 ## Tutorial Data
 
-Download the
-[exercises repository](https://next.hessenbox.de/index.php/s/c749MW3esYBqgTQ)
-(as a ZIP), then unpack it locally. Open the `.Rproj` in **RStudio** and start
-with the provided exercises.
+[Download project ZIP](https://github.com/gisma/EON-Obs2SpatState/archive/refs/heads/main.zip)
+
+[Open project repository](https://github.com/gisma/EON-Obs2SpatState)
+
+[Open slides](mc_warmup_live_slides_en.html)

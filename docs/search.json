@@ -44,6 +44,28 @@
     ]
   },
   {
+    "objectID": "block4/mc_data.html",
+    "href": "block4/mc_data.html",
+    "title": "Data Sources",
+    "section": "",
+    "text": "Download project ZIP\nOpen project repository\nOpen slides",
+    "crumbs": [
+      "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation",
+      "Data Sources"
+    ]
+  },
+  {
+    "objectID": "block4/mc_data.html#tutorial-data",
+    "href": "block4/mc_data.html#tutorial-data",
+    "title": "Data Sources",
+    "section": "",
+    "text": "Download project ZIP\nOpen project repository\nOpen slides",
+    "crumbs": [
+      "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation",
+      "Data Sources"
+    ]
+  },
+  {
     "objectID": "block4/mc_warmup_live_slides_en.html#the-central-problem",
     "href": "block4/mc_warmup_live_slides_en.html#the-central-problem",
     "title": "Slides: From discrete observations to spatial statements",
@@ -867,5 +889,27 @@
     "title": "Reader: From Discrete Observations to Spatial Statements",
     "section": "Footnotes",
     "text": "Footnotes\n\n\nTobler, W. R. (1970). A computer movie simulating urban growth in the Detroit region. Economic Geography, 46(Supplement), 234–240. https://doi.org/10.2307/143141.↩︎"
+  },
+  {
+    "objectID": "block4/mc_tec.html",
+    "href": "block4/mc_tec.html",
+    "title": "Microclimate Sensors & Power-Supply Units",
+    "section": "",
+    "text": "Froggit shop [DE]\n  \n  \n    \n     Ecowitt shop [US]\n  \n  \n    \n     Fine Offset\n  \n\n      \nThe sensors from Fine Offset are re-branded and partly modified by the resellers. This article deals with sensors from the german re-seller froggit and the US re-seller ecowitt. More precise the DP-/GW SmartHubs WiFi Gateway with temperature, humidity & Pressure which is developed by fine offset. The unique selling point of the LoRa-Wifi gateway is the extraordinarily extensive possibility of connecting radio-bound sensors.",
+    "crumbs": [
+      "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation",
+      "Microclimate Sensors & Power-Supply Units"
+    ]
+  },
+  {
+    "objectID": "block4/mc_tec.html#calibration-concept",
+    "href": "block4/mc_tec.html#calibration-concept",
+    "title": "Microclimate Sensors & Power-Supply Units",
+    "section": "Calibration Concept",
+    "text": "Calibration Concept\nThe low budget sensors are usually lacking of a stable measurement quality. To obtain reliable micro climate data a two step calibration process is suggested.\n\nThe measurements of all sensors (preferably in a climate chamber) will be statistically analysed to identify sensor which produce systematic and significant outliers.\nThe sensors are calibrated against an operational running high price reference station in the field.",
+    "crumbs": [
+      "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation",
+      "Microclimate Sensors & Power-Supply Units"
+    ]
   }
 ]
