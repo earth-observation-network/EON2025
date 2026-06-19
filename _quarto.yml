@@ -1,9 +1,27 @@
 project: 
   type: website
   output-dir: docs/
-  resources: "block4_5/**"
+  resources:
+    - "block4/*.png"
+    - "block4/results_lake_bump_dense/**"
+    - "block4/swiss_models_one_legend_bluewhite.html"
+    - "block5/data_2024/**"
+    - "block5/interpolated/**"
+    - "block5/mc_2025_microclimate_viewer_merged_files/**"
+    - "images/**"
   render:
-  - "*.qmd"
+    - index.qmd
+    - block1_magdon/01_TrainingDataCollection.qmd
+    - block1_magdon/02_ValidationDataCollection.qmd
+    - block2_bas_dob/lidar_forest_structure.qmd
+    - "block2_bas_dob/Box dimension.qmd"
+    - ml_session/ML_AOA.qmd
+    - block4/mc_2025_0.qmd
+    - block4/mc_2025_1.qmd
+    - block5/mc_2025_microclimate_viewer_merged.qmd
+    - block5/mc_2025_tec.qmd
+    - block5/mc_2025_data.qmd
+    - block6/index.qmd
 
  
 
@@ -51,12 +69,12 @@ website:
       - text: "---"
       - section: "Block 4: Microclimate Data Retrieval & Spatial Data Interpolation"
         contents:
-          - block4_5/mc_2025_0.qmd
-          # - block4_5/swiss_models_one_legend_bluewhite.html 
-          - block4_5/mc_2025_1.qmd
-          - block4_5/mc_2025_microclimate_viewer_merged.qmd
-          - block4_5/mc_2025_tec.qmd
-          - block4_5/mc_2025_data.qmd
+          - block4/mc_2025_0.qmd
+          # - block4/swiss_models_one_legend_bluewhite.html 
+          - block4/mc_2025_1.qmd
+          - block5/mc_2025_microclimate_viewer_merged.qmd
+          - block5/mc_2025_tec.qmd
+          - block5/mc_2025_data.qmd
       - text: "---"
       - section: "Block 5: Spatial patterns"
         contents:

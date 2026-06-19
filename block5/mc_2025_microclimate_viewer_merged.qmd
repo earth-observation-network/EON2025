@@ -19,30 +19,20 @@ format:
     code-fold: true
     code-tools: true
 execute:
-  warning: true
-  message: true
-  echo: true
+  warning: false
+  message: false
+  echo: false
   cache: false
 
 ---
 
 # Overview
 
-This document demonstrates and explains a six-stage spatial pipeline for Ecowitt temperature data:
-
--   Ingest & clean: load two loggers, harmonize names, and aggregate to 3-hourly.
--   Interpolation preview: per-timestep KED (universal kriging) and a multi-panel plot.
--   Scale inference (L): fit a global variogram to get L50 / L95 (spatial correlation ranges).
--   Scale-matched predictors: build DEM-derived rasters (optionally slope/aspect/TRI) at the right scale.
--   Tune $R^*$: select an optimal drift radius $R$ with block-CV (U-curve), then benchmark methods.
--   Diagnostics: export products, report scales, and compute an optional error budget.
-
-**Key concept:** We use two DEMs on purpose — `DEM_scale` at native/coarser resolution drives scales, tuning, folds, CV, and error budget. `DEM_render` is an upsampled/aggregated DEM for pretty maps and interpolation output. This separation prevents the tuner from collapsing to 10 m just because pixels are tiny.
-
-## 0) Requirements & Helpers
+This page runs the Ecowitt/DEM workflow and lists the generated products under `block5/interpolated/`. Computation chunks are hidden from the rendered page; the visible content is the product overview, compact diagnostics, and viewer launch instructions.
 
 ```{r}
 #| label: setup
+#| include: false
 # Global setup + packages
 set.seed(42)
 options(width = 100)
@@ -60,6 +50,7 @@ invisible(lapply(pkgs, function(p) suppressPackageStartupMessages(library(p, cha
 
 ```{r}
 #| label: helpers
+#| include: false
 # Small utilities (kept identical to your working script where applicable)
 # SpatRaster sicher "pinnen" (Datei-basiert) und als gültiges Objekt zurückgeben
 .pin_rast <- function(r, crs = NULL, dir = NULL, name = "pinned") {
@@ -139,7 +130,7 @@ build_explanations <- function(fig_dir, pick_ts) {
 
 ```{r}
 #| label: reporting-helpers
-#| echo: false
+#| include: false
 #| warning: false
 #| message: false
 
@@ -169,26 +160,23 @@ build_explanations <- function(fig_dir, pick_ts) {
 }
 ```
 
-> **Why this matters:** using fine pixels for scale estimation will cap $R$ at a few pixels, resulting in the “10 m fallback”. Keep `DEM_scale` at a realistic native/coarser resolution for L/R.
-
-## 1) Project & Paths
-
 ```{r}
 #| label: paths
+#| include: false
 # Robust project root finder and paths
 wd <- rprojroot::find_rstudio_root_file()
 
-source(file.path(wd, "block4_5/all_functions_1.R"))   # consolidated toolkit
+source(file.path(wd, "block5/all_functions_1.R"))   # consolidated toolkit
 
-#fn_DTM        <- file.path(wd, "block4_5/data_2024/copernicus_DEM.tif")
-fn_DTM        <- file.path(wd, "block4_5/data_2024/DEM.tif")
-fn_stations   <- file.path(wd, "block4_5/data_2024/stations_prelim_modifiziert.gpkg")
-fn_area       <- file.path(wd, "block4_5/data_2024/plot.shp")
-fn_temp_FC29  <- file.path(wd, "block4_5/data_2024/all_GW1000A-WIFIFC29.xlsx")
-fn_temp_DB2F  <- file.path(wd, "block4_5/data_2024/all_GW1000A-WIFIDB2F.xlsx")
-cleandata_rds <- file.path(wd, "block4_5/data_2024/climdata.RDS")
+#fn_DTM        <- file.path(wd, "block5/data_2024/copernicus_DEM.tif")
+fn_DTM        <- file.path(wd, "block5/data_2024/DEM1.tif")
+fn_stations   <- file.path(wd, "block5/data_2024/stations_prelim_modifiziert.gpkg")
+fn_area       <- file.path(wd, "block5/data_2024/plot.shp")
+fn_temp_FC29  <- file.path(wd, "block5/data_2024/all_GW1000A-WIFIFC29.xlsx")
+fn_temp_DB2F  <- file.path(wd, "block5/data_2024/all_GW1000A-WIFIDB2F.xlsx")
+cleandata_rds <- file.path(wd, "block5/data_2024/climdata.RDS")
 
-out_dir    <- file.path(wd, "block4_5/interpolated")
+out_dir    <- file.path(wd, "block5/interpolated")
 fig_dir    <- file.path(out_dir, "fig")
 method_dir <- file.path(out_dir, "methods_compare")
 report_dir <- file.path(out_dir, "report")
@@ -199,15 +187,15 @@ epsg <- "EPSG:32633"  # UTM zone 33N
 sf_crs_utm33 <- sf::st_crs(epsg)
 ```
 
-## 2) Base Data & DEM Strategy
-
 ```{r}
 #| label: dem-and-areas
+#| include: false
 # DEMs
 DEM_scale  <- terra::rast(fn_DTM) |> terra::project(epsg)
-DEM_scale  <- terra::aggregate(DEM_scale, c(20, 20))  # coarsen ~20–25 m (as in your working code)
+DEM_scale  <- terra::aggregate(DEM_scale, c(2, 2))  # coarsen ~20–25 m (as in your working code)
 names(DEM_scale) <- "altitude"
-DEM_render <- DEM_scale |> terra::aggregate(fact = c(10, 10))  # for rendering products
+#DEM_render <- DEM_scale |> terra::aggregate(fact = c(10, 10))  # for rendering products
+DEM_render = DEM_scale
 
 cat("DEM_scale res (m): ", paste(terra::res(DEM_scale),  collapse=" x "), "\n")
 cat("DEM_render res (m):", paste(terra::res(DEM_render), collapse=" x "), "\n")
@@ -223,7 +211,7 @@ stations_pos <- stations_pos %>%
 
 ```{r}
 #| label: dem-summary
-#| echo: false
+#| include: false
 #| message: false
 #| warning: false
 
@@ -243,10 +231,9 @@ if (exists("DEM_scale") && exists("DEM_render")) {
 }
 ```
 
-## 3) Ecowitt Ingestion, Cleaning, Aggregation
-
 ```{r}
 #| label: ingest-and-clean
+#| include: false
 temp_FC29 <- extract_ecowitt_core_vars(fn_temp_FC29)
 temp_DB2F <- extract_ecowitt_core_vars(fn_temp_DB2F)
 t_rh_all  <- merge_ecowitt_logger_vars(temp_FC29, temp_DB2F)
@@ -283,7 +270,7 @@ saveRDS(m, cleandata_rds)
 
 ```{r}
 #| label: stations-area-summary
-#| echo: false
+#| include: false
 #| message: false
 
 if (exists("stations_pos") && exists("plot_area")) {
@@ -304,40 +291,51 @@ if (exists("stations_pos") && exists("plot_area")) {
 }
 ```
 
-## 4) Interpolation Preview (Per-Timestep KED)
-
 ```{r}
 #| label: ked-preview
+#| include: false
 min_pts <- 5
-vars <- as.list(grep("^A\\d{8,14}", names(m), value = TRUE))
+#vars <- as.list(grep("^A\\d{8,14}", names(m), value = TRUE))
+vars <- grep("^A\\d{14}$", names(m), value = TRUE)
 
 kriged_list <- lapply(vars, function(v) {
-  interpolate_kriging(v, m, DEM_render, output_dir = out_dir, label = "pretty")
+  interpolate_kriging(v, m, DEM_scale, output_dir = out_dir, label = "pretty")
 })
 names(kriged_list) <- vars
 ```
 
 ```{r}
 #| label: panel
+#| include: false
 # Shared color scale across all timestamps
-panel <- timeseries_panel(
-  kriged_list        = kriged_list,
-  plot_area          = plot_area,
-  stations_pos       = stations_pos,
-  cells_target       = 150000,
-  max_cols           = 4,
-  label_pretty_time  = TRUE,
-  out_png            = file.path(fig_dir, "timeseries_panel_grid.png"),
-  out_pdf            = file.path(fig_dir, "timeseries_panel_grid.pdf"),
-  fill_label         = "Temperature"
-)
-panel$plot
-```
+valid_ked <- vapply(kriged_list, function(x) inherits(x, "stars"), logical(1))
+skipped_ked <- names(kriged_list)[!valid_ked]
 
-## 5) Method Comparison for Densest Timestamp (Working Code)
+if (!any(valid_ked)) {
+  cat("No valid KED rasters are available for the time-series panel. The page continues; skipped timestamps: ",
+      paste(skipped_ked, collapse = ", "), "\n", sep = "")
+} else {
+  if (length(skipped_ked)) {
+    cat("Skipped KED timestamps: ", paste(skipped_ked, collapse = ", "), "\n", sep = "")
+  }
+  panel <- timeseries_panel(
+    kriged_list        = kriged_list[valid_ked],
+    plot_area          = plot_area,
+    stations_pos       = stations_pos,
+    cells_target       = 150000,
+    max_cols           = 4,
+    label_pretty_time  = TRUE,
+    out_png            = file.path(fig_dir, "timeseries_panel_grid.png"),
+    out_pdf            = file.path(fig_dir, "timeseries_panel_grid.pdf"),
+    fill_label         = "Temperature"
+  )
+  panel$plot
+}
+```
 
 ```{r}
 #| label: run-one
+#| include: false
 # Densest timestamp
 pick_idx <- pick_densest_index(m, vars)
 pick_ts  <- names(m)[pick_idx]
@@ -363,11 +361,22 @@ res_one <- run_one(
 )
 ```
 
-## 6) (Optional) Compute All Time Steps
+```{r}
+#| label: terrain-scale-interpretation
+#| include: false
+terrain_scale_note <- res_one$scale_diagnostic %||% res_one$terrain_scale
+```
+
+```{r}
+#| label: cv-status-interpretation
+#| include: false
+cv_note <- res_one$cv_status
+```
 
 ```{r}
 #| label: compute-all
-compute_all <- FALSE
+#| include: false
+compute_all <- identical(Sys.getenv("MC_COMPUTE_ALL"), "true")
 
 if (isTRUE(compute_all)) {
   req <- c("m","DEM_render","DEM_scale","method_dir","fig_dir","report_dir")
@@ -454,10 +463,9 @@ if (isTRUE(compute_all)) {
 }
 ```
 
-## 7) Save CSVs for the One Timestamp
-
 ```{r}
 #| label: save-csvs
+#| include: false
 ts_label <- pretty_time(pick_ts)
 bench_base_csv <- file.path(report_dir, sprintf("benchmark_%s.csv",        slug(ts_label)))
 bench_ex_csv   <- file.path(report_dir, sprintf("benchmark_extras_%s.csv", slug(ts_label)))
@@ -470,10 +478,11 @@ if (is.data.frame(res_one$errtab))    write.csv(res_one$errtab,    eb_base_csv, 
 if (is.data.frame(res_one$errtab_ex)) write.csv(res_one$errtab_ex, eb_ex_csv,   row.names = FALSE)
 ```
 
-## 8) Console Summary
+## Product overview
 
 ```{r}
 #| label: console-summary
+#| include: false
 n_stations <- nrow(stations_pos)
 n_pts_ts   <- sum(is.finite(m[[pick_ts]]))
 Ls         <- get_Ls(res_one$wf$L)
@@ -487,71 +496,191 @@ cat(sprintf("Chosen R (micro/local): %s / %s m\n",
 ))
 ```
 
-## 9) Shiny Viewer (Optional, uses existing files)
+```{r}
+#| label: product-registry
+#| echo: false
+#| message: false
+#| warning: false
+#| results: asis
 
-> The viewer launches a Shiny app; to not block Quarto rendering, the launch is wrapped in `if (interactive())`.
+rel_product_path <- function(path) {
+  path <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  block_root <- normalizePath(file.path(wd, "block5"), winslash = "/", mustWork = FALSE)
+  sub(paste0("^", gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", block_root), "/"), "", path)
+}
+
+product_action <- function(path, label = "Open") {
+  rel <- rel_product_path(path)
+  sprintf('<a href="%s" target="_blank">%s</a>', rel, label)
+}
+
+product_row <- function(type, method_scale, file, action) {
+  data.frame(
+    `Product type` = type,
+    `Method/scale` = method_scale,
+    File = file,
+    Action = action,
+    check.names = FALSE
+  )
+}
+
+describe_product <- function(path) {
+  b <- basename(path)
+  stem <- tools::file_path_sans_ext(b)
+  if (grepl("^timeseries_panel_grid", b)) return("Time-series KED panel")
+  if (grepl("^benchmark_extras_", b)) return("Benchmark with extra predictors")
+  if (grepl("^benchmark_", b)) return("Benchmark")
+  if (grepl("^u_curve_extras_", b)) return("R tuning curve with extra predictors")
+  if (grepl("^u_curve_", b)) return("R tuning curve")
+  if (grepl("^error_budget_extras_", b)) return("Error budget with extra predictors")
+  if (grepl("^error_budget_", b)) return("Error budget")
+  if (grepl("^summary_Rstar_bestmethod", b)) return("Rstar/best-method summary")
+  if (grepl("\\.tif$", b, ignore.case = TRUE)) {
+    method <- toupper(sub("_.*$", "", stem))
+    scale <- if (grepl("_Rstar$", stem, ignore.case = TRUE)) "Rstar" else if (grepl("_L95$", stem, ignore.case = TRUE)) "L95" else "preview"
+    return(paste(method, scale))
+  }
+  stem
+}
+
+raster_product_registry <- build_raster_product_registry(out_dir = out_dir, method_dir = method_dir)
+fig_products <- list.files(fig_dir, pattern = "\\.(png|pdf)$", full.names = TRUE, ignore.case = TRUE)
+report_products <- list.files(report_dir, pattern = "\\.csv$", full.names = TRUE, ignore.case = TRUE)
+
+product_registry <- do.call(rbind, Filter(Negate(is.null), c(
+  lapply(fig_products, function(path) {
+    type <- if (grepl("\\.png$", path, ignore.case = TRUE)) "Quicklook PNG" else "Figure PDF"
+    action <- if (identical(type, "Quicklook PNG")) "Open" else "Download"
+    product_row(type, describe_product(path), basename(path), product_action(path, action))
+  }),
+  lapply(seq_len(nrow(raster_product_registry)), function(i) {
+    p <- raster_product_registry[i, , drop = FALSE]
+    family_label <- if (identical(p$family, "ked_timeseries")) "KED time series" else "Method comparison"
+    scale_label <- if (!is.na(p$scale)) paste0(" / ", p$scale) else ""
+    product_row(
+      "GeoTIFF raster product",
+      sprintf("%s / %s%s / %s", family_label, p$method, scale_label, p$timestamp),
+      basename(p$file),
+      product_action(p$file, "Download")
+    )
+  }),
+  lapply(report_products, function(path) {
+    product_row("CSV report", describe_product(path), basename(path), product_action(path, "Download"))
+  })
+)))
+
+diagnostic_rows <- list()
+if (is.data.frame(terrain_scale_note) &&
+    nrow(terrain_scale_note) > 0 &&
+    identical(terrain_scale_note$status[1], "range_unresolved_beyond_observation_window")) {
+  diagnostic_rows[[length(diagnostic_rows) + 1]] <- product_row(
+    "Diagnostic",
+    "Unsupported variogram range",
+    "Range outside station/DEM support",
+    "Review diagnostics"
+  )
+}
+if (is.list(cv_note) && !isTRUE(cv_note$ok)) {
+  diagnostic_rows[[length(diagnostic_rows) + 1]] <- product_row(
+    "Diagnostic",
+    "Cross-validation",
+    cv_note$reason %||% "CV skipped",
+    "Review diagnostics"
+  )
+}
+if (exists("skipped_ked") && length(skipped_ked)) {
+  diagnostic_rows[[length(diagnostic_rows) + 1]] <- product_row(
+    "Diagnostic",
+    "Skipped KED timestamps",
+    paste(length(skipped_ked), "timestamp(s)"),
+    "Review diagnostics"
+  )
+}
+
+if (length(diagnostic_rows)) {
+  product_registry <- rbind(product_registry, do.call(rbind, diagnostic_rows))
+}
+
+if (is.null(product_registry) || !nrow(product_registry)) {
+  cat("No calculated products were found under `block5/interpolated/`.\n")
+} else {
+  cat("The product registry below lists calculated files under `block5/interpolated/fig/`, KED time-series GeoTIFFs under `block5/interpolated/`, method-comparison GeoTIFFs under `block5/interpolated/methods_compare/`, and CSV reports under `block5/interpolated/report/`.\n\n")
+  knitr::kable(product_registry, format = "html", escape = FALSE)
+}
+```
+
+## Diagnostics
+
+```{r}
+#| label: compact-diagnostics
+#| echo: false
+#| message: false
+#| warning: false
+#| results: asis
+
+cards <- list()
+
+if (is.data.frame(terrain_scale_note) &&
+    nrow(terrain_scale_note) > 0 &&
+    identical(terrain_scale_note$status[1], "range_unresolved_beyond_observation_window")) {
+  cards[[length(cards) + 1]] <- data.frame(
+    Diagnostic = "Unsupported variogram range / skipped L-scale terrain predictors",
+    Status = terrain_scale_note$status[1],
+    Interpretation = "The KED map is shown as a local interpolation product. The fitted range is not interpreted as a terrain, microrelief, or process scale; L-scale terrain predictors were skipped without capping the radius or enlarging the DEM domain.",
+    check.names = FALSE
+  )
+}
+
+if (is.list(cv_note) && !isTRUE(cv_note$ok)) {
+  cv_msg <- if (identical(cv_note$reason, "fewer_than_two_folds")) {
+    "Cross-validation was not computed for this timestamp because fewer than two valid folds were available after filtering the data. The interpolation result is therefore shown without CV-based error metrics. This is a data-support limitation, not a successful validation result."
+  } else {
+    cv_note$message %||% "Cross-validation was not computed for this timestamp. The interpolation result is therefore shown without CV-based error metrics. This is a data-support limitation, not a successful validation result."
+  }
+  cards[[length(cards) + 1]] <- data.frame(
+    Diagnostic = "Cross-validation",
+    Status = cv_note$reason %||% "skipped",
+    Interpretation = cv_msg,
+    check.names = FALSE
+  )
+}
+
+if (exists("skipped_ked") && length(skipped_ked)) {
+  cards[[length(cards) + 1]] <- data.frame(
+    Diagnostic = "Skipped KED timestamps",
+    Status = paste(length(skipped_ked), "timestamp(s) skipped"),
+    Interpretation = paste(utils::head(skipped_ked, 12), collapse = ", "),
+    check.names = FALSE
+  )
+}
+
+if (!length(cards)) {
+  cat("No skipped validation, unsupported-scale, or timestamp diagnostics were recorded for the displayed run.\n")
+} else {
+  knitr::kable(do.call(rbind, cards), format = "html", escape = TRUE)
+}
+```
+
+## Open the Shiny viewer
+
+Run this command from the repository root after the generated input products already exist under `block5/interpolated/`. The command starts the existing Shiny viewer from the toolkit and reads generated products; it does not recompute the full workflow. The control script `block5/mc_2025_microclimate_viewer.R` is a computation script, so it is not used here as a viewer-only launcher.
+
+```bash
+R -e 'source("block5/all_functions_1.R"); wd <- getwd(); out_dir <- file.path(wd, "block5/interpolated"); method_dir <- file.path(out_dir, "methods_compare"); fig_dir <- file.path(out_dir, "fig"); report_dir <- file.path(out_dir, "report"); m <- readRDS(file.path(wd, "block5/data_2024/climdata.RDS")); stations_pos <- m; plot_area <- sf::st_read(file.path(wd, "block5/data_2024/plot.shp"), quiet = TRUE); vars <- grep("^A\\d{14}$", names(m), value = TRUE); rds <- list.files(report_dir, "^results_.*\\.RDS$", full.names = TRUE); res <- if (length(rds)) readRDS(rds[[length(rds)]]) else list(); shiny::runApp(run_mc_viewer(vars = vars, method_dir = method_dir, fig_dir = fig_dir, stations_pos = stations_pos, plot_area = plot_area, wf = res$wf %||% NULL, wf_ex = res$wf_ex %||% NULL, tune = res$tune %||% NULL, tune_ex = res$tune_ex %||% NULL, bench = res$bench %||% NULL, bench_ex = res$bench_ex %||% NULL, tab_err = res$errtab %||% NULL, tab_err_ex = res$errtab_ex %||% NULL, explanations = build_explanations(fig_dir, vars[1])), launch.browser = TRUE)'
+```
+
+A standalone static HTML viewer can be generated from the same product registry in a later step.
+
 
 ```{r}
 #| label: viewer-funcs
-# Minimal viewer injection: use your working run_mc_viewer() with robust file matching
-raster_path <- function(method, ts) {
-  stopifnot(length(method) == 1, length(ts) == 1)
-  m <- tolower(method)
-  .ts_tokens <- function(ts_key) {
-    raw <- tolower(as.character(ts_key))
-    pty <- tolower(pretty_time(ts_key))
-    slug_pt <- gsub("[^0-9A-Za-z_-]+","-", pty)
-    d14 <- sub("^a", "", raw)
-    ymd  <- if (nchar(d14) >= 8) substr(d14,1,8) else NA_character_
-    hhmm <- if (nchar(d14) >= 12) substr(d14,9,12) else NA_character_
-    comp1 <- if (!is.na(ymd) && !is.na(hhmm))
-      paste0(substr(ymd,1,4),"-",substr(ymd,5,6),"-",substr(ymd,7,8),"-",
-             substr(hhmm,1,2),"-",substr(hhmm,3,4)) else NA_character_
-    comp2 <- gsub("-", "", comp1)
-    ymd_dash <- if (!is.na(ymd)) paste0(substr(ymd,1,4),"-",substr(ymd,5,6),"-",substr(ymd,7,8)) else NA_character_
-    unique(na.omit(c(raw, slug_pt, comp1, comp2, ymd_dash, ymd)))
-  }
-  toks <- .ts_tokens(ts)
-  tok_rx <- gsub("[-_]", "[-_]", toks)
-
-  all_files <- list.files(method_dir, pattern = "\\.tif$", full.names = TRUE, ignore.case = TRUE)
-  if (!length(all_files)) return(NA_character_)
-  b <- tolower(basename(all_files))
-
-  keep_pref <- grepl(paste0("^", m, "_"), b)
-  files_m <- all_files[keep_pref]; b_m <- b[keep_pref]
-  if (length(files_m)) {
-    score <- vapply(seq_along(b_m), function(i) {
-      max(c(0, vapply(tok_rx, function(rx) if (grepl(rx, b_m[i], perl = TRUE)) nchar(rx) else 0L, integer(1))))
-    }, numeric(1))
-
-    if (any(score > 0)) {
-      best <- files_m[score == max(score)]
-      bbest <- tolower(basename(best))
-      idxR <- grep("_rstar\\.tif$", bbest)
-      if (length(idxR)) return(best[idxR[1]])
-      idxL <- grep("_l95\\.tif$", bbest)
-      if (length(idxL)) return(best[idxL[1]])
-      return(best[1])
-    }
-  }
-
-  if (toupper(method) %in% c("KED","PREVIEW")) {
-    out_dir_local <- dirname(method_dir)
-    prev <- list.files(out_dir_local, pattern = "\\.tif$", full.names = TRUE, ignore.case = TRUE)
-    if (length(prev)) {
-      bp <- tolower(basename(prev))
-      rx_prev <- paste0("^(", paste0(tok_rx, collapse = "|"), ")_interpolated(_wgs84)?\\.tif$")
-      hit <- grepl(rx_prev, bp, perl = TRUE)
-      if (any(hit)) return(prev[which(hit)[1]])
-    }
-  }
-  NA_character_
-}
+#| include: false
+viewer_product_registry <- build_raster_product_registry(out_dir = out_dir, method_dir = method_dir)
 ```
 
 ```{r}
 #| label: viewer-launch
+#| include: false
 # Only launch interactively
 if (interactive()) {
   explanations <- build_explanations(fig_dir = fig_dir, pick_ts = vars[[pick_idx]])
@@ -569,6 +698,7 @@ if (interactive()) {
     bench_ex     = res_one$bench_ex,
     tab_err      = res_one$errtab,
     tab_err_ex   = res_one$errtab_ex,
+    scale_diagnostic = res_one$scale_diagnostic %||% terrain_scale_note %||% NULL,
     explanations = explanations
   )
 }

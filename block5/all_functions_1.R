@@ -388,14 +388,35 @@
   voro_simple <- function(m_sf, varname, DTM) {
     stopifnot(inherits(m_sf, "sf"), inherits(DTM, "SpatRaster"))
     if (!varname %in% names(m_sf)) stop("Column '", varname, "' not found.")
-    m_slice <- m_sf[!is.na(m_sf[[varname]]), c(varname, attr(m_sf, "sf_column"))]
-    if (nrow(m_slice) < 2) stop("Need at least 2 points for Voronoi.")
-    p <- terra::vect(sf::st_transform(m_slice, terra::crs(DTM)))
-    voro <- terra::voronoi(p)
-    voro <- terra::crop(voro, terra::as.polygons(terra::ext(DTM)))
-    r <- terra::rasterize(voro, DTM, field = varname)
-    names(r) <- "voronoi"
-    r
+    pts <- m_sf[is.finite(m_sf[[varname]]), c(varname, attr(m_sf, "sf_column"))]
+    if (nrow(pts) < 2) stop("Need at least 2 points for Voronoi.")
+    
+    pts <- sf::st_transform(pts, terra::crs(DTM))
+    station_xy <- sf::st_coordinates(pts)[, 1:2, drop = FALSE]
+    station_vals <- pts[[varname]]
+    
+    template <- DTM[[1]]
+    template_vals <- terra::values(template, mat = FALSE)
+    valid_cells <- which(is.finite(template_vals))
+    if (!length(valid_cells)) stop("No valid template cells for Voronoi.")
+    
+    cell_xy <- terra::xyFromCell(template, valid_cells)
+    nearest <- integer(nrow(cell_xy))
+    chunk_size <- 50000L
+    chunks <- split(seq_len(nrow(cell_xy)), ceiling(seq_len(nrow(cell_xy)) / chunk_size))
+    
+    for (idx in chunks) {
+      dx <- outer(cell_xy[idx, 1], station_xy[, 1], "-")
+      dy <- outer(cell_xy[idx, 2], station_xy[, 2], "-")
+      nearest[idx] <- max.col(-(dx * dx + dy * dy), ties.method = "first")
+    }
+    
+    out <- template
+    out_vals <- rep(NA_real_, terra::ncell(out))
+    out_vals[valid_cells] <- station_vals[nearest]
+    terra::values(out) <- out_vals
+    names(out) <- "voronoi"
+    out
   }
   
   #' Ordinary Kriging (OK) prediction using automap variogram
@@ -560,35 +581,112 @@
   #' @param dem_raster SpatRaster (prediction grid)
   #' @param output_dir output folder for GeoTIFF
   #' @param label 'raw' or 'pretty' (pretty formats layer name via pretty_time())
+
   interpolate_kriging <- function(varname, data_sf, dem_raster, output_dir = out_dir,
-                                  label = c("raw","pretty")) {
+                                  label = c("raw", "pretty")) {
     label <- match.arg(label)
+    
     message("Interpolating: ", varname)
-    if (!(varname %in% names(data_sf))) stop("Variable ", varname, " not found in data.")
-    if (all(is.na(data_sf[[varname]]))) { warning("All values are NA for ", varname, " – skipping."); return(NULL) }
-    f_drift <- stats::as.formula(paste(varname, "~ altitude"))
-    vgm_model <- tryCatch(automap::autofitVariogram(f_drift, input_data = data_sf), error = function(e) NULL)
-    if (is.null(vgm_model)) {
-      vgm_model <- tryCatch({ list(var_model = automap::autofitVariogram(stats::as.formula(paste(varname, "~ 1")), input_data = data_sf)$var_model) }, error = function(e) NULL)
+    
+    if (!(varname %in% names(data_sf))) {
+      stop("Variable ", varname, " not found in data.")
     }
-    if (is.null(vgm_model)) { warning("Variogram failed for ", varname); return(NULL) }
-    kriged_result <- tryCatch({
-      gstat::krige(
-        formula  = if (!is.null(vgm_model) && grepl("altitude", deparse(f_drift))) f_drift else stats::as.formula(paste(varname, "~ 1")),
-        locations = data_sf,
-        newdata   = stars::st_as_stars(dem_raster),
-        model     = vgm_model$var_model
+    
+    if (!("altitude" %in% names(data_sf))) {
+      stop("Column 'altitude' not found in data_sf.")
+    }
+    
+    pts <- data_sf[
+      is.finite(data_sf[[varname]]) &
+        is.finite(data_sf$altitude),
+    ]
+    
+    if (nrow(pts) < 5) {
+      warning("Too few valid points for ", varname, " – skipping.")
+      return(NULL)
+    }
+    
+    if (length(unique(pts[[varname]])) < 2) {
+      warning("No value contrast for ", varname, " – skipping.")
+      return(NULL)
+    }
+    
+    f_drift <- stats::as.formula(paste(varname, "~ altitude"))
+    
+    vgm_model <- tryCatch(
+      automap::autofitVariogram(f_drift, input_data = pts),
+      error = function(e) NULL
+    )
+    
+    if (is.null(vgm_model)) {
+      vgm_model <- tryCatch(
+        {
+          list(
+            var_model = automap::autofitVariogram(
+              stats::as.formula(paste(varname, "~ 1")),
+              input_data = pts
+            )$var_model
+          )
+        },
+        error = function(e) NULL
       )
-    }, error = function(e) { warning("Kriging failed for ", varname, ": ", e$message); return(NULL) })
-    if (is.null(kriged_result)) return(NULL)
-    if ("var1.pred" %in% names(kriged_result)) kriged_result <- kriged_result["var1.pred"]
+    }
+    
+    if (is.null(vgm_model)) {
+      warning("Variogram failed for ", varname)
+      return(NULL)
+    }
+    
+    range_vals <- suppressWarnings(as.numeric(vgm_model$var_model$range[vgm_model$var_model$model != "Nug"]))
+    ked_range <- if (any(is.finite(range_vals))) max(range_vals[is.finite(range_vals)]) else NA_real_
+    ked_scale <- terrain_scale_diagnostic(ked_range, dem = dem_raster, stations = pts)
+    if (identical(ked_scale$status[1], "range_unresolved_beyond_observation_window")) {
+      message(
+        "KED variogram range is outside observation support for ", varname,
+        "; keeping the KED surface as a local interpolation product, not a process scale."
+      )
+    }
+    
+    nd <- stars::st_as_stars(dem_raster)
+    
+    if (!("altitude" %in% names(nd)) && length(names(nd)) == 1) {
+      names(nd) <- "altitude"
+    }
+    
+    kriged_result <- tryCatch(
+      {
+        gstat::krige(
+          formula   = f_drift,
+          locations = pts,
+          newdata   = nd,
+          model     = vgm_model$var_model
+        )
+      },
+      error = function(e) {
+        warning("Kriging failed for ", varname, ": ", e$message)
+        return(NULL)
+      }
+    )
+    
+    if (is.null(kriged_result)) {
+      return(NULL)
+    }
+    
+    if ("var1.pred" %in% names(kriged_result)) {
+      kriged_result <- kriged_result["var1.pred"]
+    }
+    
     new_name <- if (label == "pretty") pretty_time(varname) else varname
     names(kriged_result) <- new_name
+    attr(kriged_result, "scale_diagnostic") <- ked_scale
+    
     out_file <- file.path(output_dir, paste0(varname, "_interpolated.tif"))
     stars::write_stars(kriged_result, out_file, overwrite = TRUE)
+    
     message("✔ Written: ", out_file)
+    
     kriged_result
-  }
+  }  
   
   
   # ========================= 30_variogram_scale.R ============================ #
@@ -737,6 +835,87 @@
   
   
   # ============================= 40_predictors.R ============================= #
+  
+  terrain_scale_diagnostic <- function(R_meters, dem = NULL, stations = NULL) {
+    requested <- suppressWarnings(as.numeric(R_meters[1]))
+    if (!length(requested)) requested <- NA_real_
+    out <- data.frame(
+      requested_R_meters = requested,
+      dem_nrow = NA_integer_,
+      dem_ncol = NA_integer_,
+      dem_res_x_m = NA_real_,
+      dem_res_y_m = NA_real_,
+      dem_width_m = NA_real_,
+      dem_height_m = NA_real_,
+      station_diameter_m = NA_real_,
+      station_support_radius_m = NA_real_,
+      max_operational_terrain_radius_m = NA_real_,
+      focal_window_cells = NA_integer_,
+      status = "range_invalid_or_missing",
+      interpretation = "Range is missing or invalid; L-scale terrain predictors are not computed.",
+      stringsAsFactors = FALSE
+    )
+    
+    if (inherits(dem, "SpatRaster")) {
+      e <- terra::ext(dem)
+      rs <- terra::res(dem)
+      out$dem_nrow <- terra::nrow(dem)
+      out$dem_ncol <- terra::ncol(dem)
+      out$dem_res_x_m <- rs[1]
+      out$dem_res_y_m <- rs[2]
+      out$dem_width_m <- e$xmax - e$xmin
+      out$dem_height_m <- e$ymax - e$ymin
+      if (is.finite(requested) && requested > 0) {
+        resm <- mean(rs)
+        rad_cells <- max(1L, round(requested / resm))
+        w <- 2L * rad_cells + 1L
+        if (w < 3L) w <- 3L
+        if (w %% 2L == 0L) w <- w + 1L
+        out$focal_window_cells <- w
+      }
+    }
+    
+    if (inherits(stations, "sf") && nrow(stations) > 1) {
+      pts <- stations
+      if (inherits(dem, "SpatRaster")) {
+        dem_crs <- terra::crs(dem)
+        if (!is.na(sf::st_crs(pts)) && nzchar(dem_crs)) {
+          pts <- tryCatch(sf::st_transform(pts, dem_crs), error = function(e) stations)
+        }
+      }
+      xy <- tryCatch(sf::st_coordinates(pts), error = function(e) NULL)
+      if (!is.null(xy) && nrow(xy) > 1) {
+        xy <- xy[, 1:2, drop = FALSE]
+        xy <- xy[stats::complete.cases(xy), , drop = FALSE]
+        if (nrow(xy) > 1) {
+          out$station_diameter_m <- max(stats::dist(xy))
+          out$station_support_radius_m <- out$station_diameter_m / 2
+        }
+      }
+    }
+    
+    supports <- c(out$dem_width_m / 2, out$dem_height_m / 2, out$station_support_radius_m)
+    supports <- supports[is.finite(supports) & supports > 0]
+    if (length(supports)) out$max_operational_terrain_radius_m <- min(supports)
+    
+    if (!is.finite(requested) || requested <= 0) {
+      out$status <- "range_invalid_or_missing"
+      out$interpretation <- "Range is missing or invalid; L-scale terrain predictors are not computed."
+    } else if (is.finite(out$max_operational_terrain_radius_m) &&
+               requested <= out$max_operational_terrain_radius_m) {
+      out$status <- "range_supported"
+      out$interpretation <- "Requested terrain radius is within the DEM and station support."
+    } else {
+      out$status <- "range_unresolved_beyond_observation_window"
+      out$interpretation <- paste(
+        "Requested variogram range lies outside the spatial support of the station network and/or DEM domain.",
+        "KED may remain a local interpolation product, but the range is not a terrain, microrelief, or process scale.",
+        "L-scale terrain predictors are not computed."
+      )
+    }
+    
+    out
+  }
   
   # Smooth a raster at one or more metric radii (m)
   # Accepts a single numeric (e.g. 60) OR a vector (c(local=60, micro=20)).
@@ -952,8 +1131,9 @@
     Rstar <- suppressWarnings(as.numeric(tune$R_star))
     if (!is.finite(Rstar)) Rstar <- L95
     
-    DEM_Rstar <- dem_at(DEM_scale, Rstar)  # Zellgröße ≈ R*
-    DEM_L95   <- dem_at(DEM_scale, L95)    # Zellgröße ≈ L95
+    DEM_pred  <- DEM_scale
+    DEM_Rstar <- DEM_pred
+    DEM_L95   <- DEM_pred
     
     # ---------- 4) ALLE Methoden auf beiden Grids rechnen -----------------------
     preds_R <- .predict_all_on_grid(m, v, DEM_Rstar, method_dir, tag = "Rstar")
@@ -1001,17 +1181,29 @@
       fold_id   = wf$fold_id,     # bereits vorhandene Blockeinteilung
       vf        = wf$L$var_model
     )
-    R_for_budget <- if (is.finite(tune$R_star)) tune$R_star else L95
-    tab_err <- error_budget(
-      y_obs = cv$y_obs, y_hat = cv$y_hat,
-      vf = wf$L$var_model, R = R_for_budget, L95 = L95,
-      sigma_inst = 0.5, alpha = 0.6
+    cv_status <- list(
+      ok = isTRUE(cv$ok),
+      reason = cv$reason %||% NA_character_,
+      message = cv$message %||% "Cross-validation status unavailable.",
+      n_folds = cv$n_folds %||% NA_integer_
     )
-    if (isTRUE(save_tables) && is.data.frame(tab_err)) {
-      utils::write.csv(tab_err, file.path(report_dir, sprintf("error_budget_%s.csv", ts_tag)), row.names = FALSE)
+    R_for_budget <- if (is.finite(tune$R_star)) tune$R_star else L95
+    tab_err <- NULL
+    if (isTRUE(cv$ok)) {
+      tab_err <- error_budget(
+        y_obs = cv$y_obs, y_hat = cv$y_hat,
+        vf = wf$L$var_model, R = R_for_budget, L95 = L95,
+        sigma_inst = 0.5, alpha = 0.6
+      )
+      if (isTRUE(save_tables) && is.data.frame(tab_err)) {
+        utils::write.csv(tab_err, file.path(report_dir, sprintf("error_budget_%s.csv", ts_tag)), row.names = FALSE)
+      }
+    } else {
+      message(cv_status$message)
     }
     
     tab_err_ex <- NULL
+    cv_status_ex <- NULL
     if (!is.null(wf_ex)) {
       cv_ex <- cv_ok(
         sf_pts    = m,
@@ -1020,14 +1212,24 @@
         fold_id   = wf_ex$fold_id,
         vf        = wf_ex$L$var_model
       )
-      R_for_budget_ex <- if (!is.null(tune_ex) && is.finite(tune_ex$R_star)) tune_ex$R_star else L95_ex
-      tab_err_ex <- error_budget(
-        y_obs = cv_ex$y_obs, y_hat = cv_ex$y_hat,
-        vf = wf_ex$L$var_model, R = R_for_budget_ex, L95 = L95_ex,
-        sigma_inst = 0.5, alpha = 0.6
+      cv_status_ex <- list(
+        ok = isTRUE(cv_ex$ok),
+        reason = cv_ex$reason %||% NA_character_,
+        message = cv_ex$message %||% "Cross-validation status unavailable.",
+        n_folds = cv_ex$n_folds %||% NA_integer_
       )
-      if (isTRUE(save_tables) && is.data.frame(tab_err_ex)) {
-        utils::write.csv(tab_err_ex, file.path(report_dir, sprintf("error_budget_extras_%s.csv", ts_tag)), row.names = FALSE)
+      R_for_budget_ex <- if (!is.null(tune_ex) && is.finite(tune_ex$R_star)) tune_ex$R_star else L95_ex
+      if (isTRUE(cv_ex$ok)) {
+        tab_err_ex <- error_budget(
+          y_obs = cv_ex$y_obs, y_hat = cv_ex$y_hat,
+          vf = wf_ex$L$var_model, R = R_for_budget_ex, L95 = L95_ex,
+          sigma_inst = 0.5, alpha = 0.6
+        )
+        if (isTRUE(save_tables) && is.data.frame(tab_err_ex)) {
+          utils::write.csv(tab_err_ex, file.path(report_dir, sprintf("error_budget_extras_%s.csv", ts_tag)), row.names = FALSE)
+        }
+      } else {
+        message(cv_status_ex$message)
       }
     }
     
@@ -1047,14 +1249,19 @@
         eb_ex_csv         = if (!is.null(wf_ex) && save_tables) file.path(report_dir, sprintf("error_budget_extras_%s.csv", ts_tag)) else NA
       ),
       wf        = wf,
+      scale_diagnostic = wf$scale_diagnostic,
+      terrain_scale = wf$terrain_scale,
       Ls        = Ls,
       tune      = tune,
       bench     = bench,
+      cv_status = cv_status,
       errtab    = tab_err,
       wf_ex     = wf_ex,
+      scale_diagnostic_ex = if (!is.null(wf_ex)) wf_ex$scale_diagnostic else NULL,
       Ls_ex     = Ls_ex,
       tune_ex   = tune_ex,
       bench_ex  = bench_ex,
+      cv_status_ex = cv_status_ex,
       errtab_ex = tab_err_ex
     )
     
@@ -1126,10 +1333,20 @@
     
     # C) Build scale-matched predictors (smooth at R_meters)
     preds_list <- list(); res_checks <- list()
+    terrain_scale <- terrain_scale_diagnostic(
+      R_meters,
+      dem = if (inherits(dem, "SpatRaster")) dem else ref_r,
+      stations = pts
+    )
     
     if (!is.null(dem)) {
-      topoR <- derive_topo_features(dem, R_meters)   # <-- numeric radius
-      preds_list$topo <- topoR
+      topoR <- NULL
+      if (identical(terrain_scale$status[1], "range_supported")) {
+        topoR <- derive_topo_features(dem, R_meters)   # <-- numeric radius
+        preds_list$topo <- topoR
+      } else {
+        message("Skipping L-scale terrain predictors: ", terrain_scale$interpretation[1])
+      }
       
       # resolution check for DEM (optional, keeps your table)
       res_xy <- terra::res(dem); res_m <- mean(res_xy)
@@ -1149,16 +1366,32 @@
         section="Predictor resolution", item="DEM", value=sprintf("%.2f", res_m),
         units="m/cell", source="grid", status=status, todo=todo
       )
+      res_checks$terrain_scale <- data.frame(
+        section="Terrain scale support", item="R_meters", value=sprintf("%.2f", R_meters),
+        units="m", source="DEM/station domain", status=terrain_scale$status[1],
+        todo=terrain_scale$interpretation[1]
+      )
     }
     
     if (!is.null(extra_preds)) {
       # IMPORTANT: pass numeric radius, not the R vector
-      smoothed <- smooth_predictors(extra_preds, R_meters)
-      preds_list$extra <- smoothed
+      if (identical(terrain_scale$status[1], "range_supported")) {
+        smoothed <- tryCatch(
+          smooth_predictors(extra_preds, R_meters),
+          error = function(e) {
+            warning("Scale-matched extra predictors failed: ", conditionMessage(e))
+            NULL
+          }
+        )
+        preds_list$extra <- smoothed
+      } else {
+        message("Skipping L-scale extra raster predictors: ", terrain_scale$interpretation[1])
+      }
     }
     
     # --- BUILD & CLEAN predictor stack -----------------------------------------
-    pred_stack <- terra::rast(Filter(Negate(is.null), preds_list))
+    have_preds <- Filter(Negate(is.null), preds_list)
+    pred_stack <- if (length(have_preds)) terra::rast(have_preds) else NULL
     
     # 1) Auf DEM-Grid reprojizieren/resamplen (falls nötig)
     if (!is.null(pred_stack) && !terra::compareGeom(pred_stack, ref_r, stopOnError = FALSE)) {
@@ -1167,10 +1400,14 @@
     }
     
     # 2) Alle Nicht-Finiten auf NA setzen (terra nutzt oft NaN als nodata)
-    pred_stack <- terra::app(pred_stack, function(x) { x[!is.finite(x)] <- NA; x })
+    if (!is.null(pred_stack)) {
+      pred_stack <- terra::app(pred_stack, function(x) { x[!is.finite(x)] <- NA; x })
+    }
     
     # 3) Auf DEM-Maske maskieren (kein Off-Grid Gerümpel)
-    pred_stack <- terra::mask(pred_stack, ref_r[[1]])
+    if (!is.null(pred_stack)) {
+      pred_stack <- terra::mask(pred_stack, ref_r[[1]])
+    }
     
     # --- GRID DF ----------------------------------------------------------------
     coords  <- terra::xyFromCell(ref_r, 1:terra::ncell(ref_r))
@@ -1191,6 +1428,8 @@
       L = Lres,
       R = R,                 # c(micro=..., local=...)
       R_meters = R_meters,   # single numeric radius for smoothing/blocks if needed
+      scale_diagnostic = terrain_scale,
+      terrain_scale = terrain_scale,
       predictors_stack = pred_stack,
       grid_df = grid_df,
       resolution_checks = res_checks,
@@ -1495,10 +1734,16 @@
     
     # predictors at R*
     Rvec       <- c(local = R_star)
-    topo_star  <- derive_topo_features(dem_sq, Rvec)
+    terrain_scale <- terrain_scale_diagnostic(R_star, dem = dem_sq, stations = pts)
+    topo_star <- NULL
+    if (identical(terrain_scale$status[1], "range_supported")) {
+      topo_star <- derive_topo_features(dem_sq, Rvec)
+    } else {
+      message("Skipping L-scale terrain predictors for benchmark: ", terrain_scale$interpretation[1])
+    }
     
     extra_star <- NULL
-    if (!is.null(extra_preds)) {
+    if (!is.null(extra_preds) && identical(terrain_scale$status[1], "range_supported")) {
       e_aligned <- if (inherits(extra_preds, "SpatRaster")) list(extra = extra_preds) else extra_preds
       e_aligned <- lapply(e_aligned, function(r){
         r2 <- .square_raster(r)
@@ -1509,17 +1754,25 @@
         r2
       })
       extra_star <- smooth_predictors(e_aligned, Rvec)
+    } else if (!is.null(extra_preds)) {
+      message("Skipping L-scale extra raster predictors for benchmark: ", terrain_scale$interpretation[1])
     }
     
     # unified predictor stack (avoid NULLs)
-    grid_stack <- terra::rast(Filter(Negate(is.null), list(topo_star, extra_star)))
+    have_grid <- Filter(Negate(is.null), list(topo_star, extra_star))
+    grid_stack <- if (length(have_grid)) terra::rast(have_grid) else NULL
     
     # drift raster for KED (same grid, smoothed to ~R*)
     R_for_drift <- if (is.finite(R_star)) R_star else mean(c(as.numeric(wf$R["local"]), wf$R_meters), na.rm = TRUE)
     if (!is.finite(R_for_drift)) R_for_drift <- 30
-    drift_star <- try(safe_focal_mean(DEM_scale, R_for_drift, ref = dem_sq), silent = TRUE)
-    if (!inherits(drift_star, "try-error") && inherits(drift_star, "SpatRaster")) {
-      names(drift_star) <- "altitude"
+    if (identical(terrain_scale$status[1], "range_supported")) {
+      drift_star <- try(safe_focal_mean(DEM_scale, R_for_drift, ref = dem_sq), silent = TRUE)
+      if (!inherits(drift_star, "try-error") && inherits(drift_star, "SpatRaster")) {
+        names(drift_star) <- "altitude"
+      } else {
+        drift_star <- ref_r
+        names(drift_star) <- "altitude"
+      }
     } else {
       drift_star <- ref_r
       names(drift_star) <- "altitude"
@@ -1527,12 +1780,16 @@
     
     # (optional) grid_df if you need it later
     coords  <- terra::xyFromCell(ref_r, 1:terra::ncell(ref_r))
-    vals    <- as.data.frame(terra::values(grid_stack))
-    names(vals) <- names(grid_stack)
-    grid_df <- cbind(data.frame(cell = seq_len(nrow(coords)), x = coords[,1], y = coords[,2]), vals)
+    grid_df <- data.frame(cell = seq_len(nrow(coords)), x = coords[,1], y = coords[,2])
+    if (!is.null(grid_stack)) {
+      vals <- as.data.frame(terra::values(grid_stack))
+      names(vals) <- names(grid_stack)
+      grid_df <- cbind(grid_df, vals)
+    }
     
     # helper to attach predictors to sf points (for non-KED algos that need xy+alt)
     enrich_pts <- function(m_sf) {
+      if (is.null(grid_stack)) return(m_sf)
       xy <- sf::st_coordinates(m_sf)
       ext <- terra::extract(grid_stack, xy)
       if (!is.null(ext) && ncol(ext) > 0) {
@@ -1644,7 +1901,15 @@
         ggplot2::theme_minimal()
     }
     
-    list(R_star = R_star, block_size = block_size, tuner = res_tune, table = bench, plot = plt)
+    list(
+      R_star = R_star,
+      block_size = block_size,
+      tuner = res_tune,
+      table = bench,
+      plot = plt,
+      terrain_scale = terrain_scale,
+      scale_diagnostic = terrain_scale
+    )
   }
   
   # ============================== 80_panel_plot.R ============================ #
@@ -1721,6 +1986,19 @@
   #' #                    R = bench$R_star, L95 = get_Ls(wf$L)$L95m)
   cv_ok <- function(sf_pts, value_col = "value", ref_r, L = NULL, vf = NULL, fold_id = NULL) {
     stopifnot(inherits(sf_pts, "sf"), inherits(ref_r, "SpatRaster"))
+    cv_skip <- function(reason, message, n_folds = NA_integer_,
+                        y_obs = numeric(), y_hat = numeric(), fold_id = NULL) {
+      list(
+        ok = FALSE,
+        reason = reason,
+        message = message,
+        n_folds = n_folds,
+        y_obs = y_obs,
+        y_hat = y_hat,
+        fold_id = fold_id,
+        vf_used = vf
+      )
+    }
     
     # 1) Normalize target column name → 'value'
     pts <- sf_pts
@@ -1731,7 +2009,13 @@
     }
     if (!"value" %in% names(pts)) stop("value_col not found.")
     pts <- pts[!is.na(pts$value), ]
-    if (nrow(pts) < 4) stop("Too few points for CV (n < 4).")
+    if (nrow(pts) < 4) {
+      return(cv_skip(
+        reason = "too_few_points",
+        message = "Cross-validation was skipped because fewer than four valid points were available.",
+        n_folds = 0L
+      ))
+    }
     
     # 2) Project to ref_r CRS and make folds if needed
     pts <- sf::st_transform(pts, terra::crs(ref_r))
@@ -1743,8 +2027,19 @@
       if (length(fold_id) != n) stop("fold_id must have same length as rows in sf_pts.")
       fold_id <- as.integer(fold_id)
     }
-    folds <- sort(unique(fold_id))
-    if (length(folds) < 2) stop("Need at least 2 folds for CV.")
+    folds <- sort(unique(fold_id[is.finite(fold_id)]))
+    n_folds <- length(folds)
+    if (n_folds < 2) {
+      y_obs <- as.numeric(pts$value)
+      return(cv_skip(
+        reason = "fewer_than_two_folds",
+        message = "Cross-validation was skipped because fewer than two valid folds were available.",
+        n_folds = n_folds,
+        y_obs = y_obs,
+        y_hat = rep(NA_real_, n),
+        fold_id = fold_id
+      ))
+    }
     
     # 3) Init outputs
     y_obs <- as.numeric(pts$value)
@@ -1779,8 +2074,28 @@
     }
     
     # 5) Sanity: ensure we filled all test points at least once
-    if (all(is.na(y_hat))) warning("cv_ok: no predictions produced (check variogram/folds).")
-    list(y_obs = y_obs, y_hat = y_hat, fold_id = fold_id, vf_used = vf)
+    if (all(is.na(y_hat))) {
+      warning("cv_ok: no predictions produced (check variogram/folds).")
+      return(cv_skip(
+        reason = "no_cv_predictions",
+        message = "Cross-validation was skipped because no fold produced a valid prediction.",
+        n_folds = n_folds,
+        y_obs = y_obs,
+        y_hat = y_hat,
+        fold_id = fold_id
+      ))
+    }
+    
+    list(
+      ok = TRUE,
+      reason = NA_character_,
+      message = "Cross-validation completed.",
+      n_folds = n_folds,
+      y_obs = y_obs,
+      y_hat = y_hat,
+      fold_id = fold_id,
+      vf_used = vf
+    )
   }
   
   #' Decompose RMSE into bias, sensor noise, scale mismatch, and model rest
@@ -1929,6 +2244,95 @@
     out
   }
   
+  .viewer_timestamp_from_key <- function(key) {
+    key <- as.character(key)
+    if (!grepl("^A\\d{14}$", key)) return(NA_character_)
+    ts <- as.POSIXct(substr(key, 2, 15), format = "%Y%m%d%H%M%S", tz = "UTC")
+    if (is.na(ts)) NA_character_ else format(ts, "%Y-%m-%d %H:%M")
+  }
+  
+  .viewer_method_label <- function(method) {
+    method <- tolower(as.character(method))
+    labels <- c(
+      ked = "KED", ok = "OK", idw = "IDW", gam = "GAM", rf = "RF",
+      voronoi = "Voronoi", trend = "Trend"
+    )
+    out <- unname(labels[method])
+    ifelse(is.na(out), toupper(method), out)
+  }
+  
+  build_raster_product_registry <- function(out_dir, method_dir) {
+    empty <- data.frame(
+      family = character(),
+      method = character(),
+      timestamp = character(),
+      scale = character(),
+      file = character(),
+      label = character(),
+      stringsAsFactors = FALSE
+    )
+    
+    rows <- list()
+    
+    ked_files <- list.files(
+      out_dir,
+      pattern = "^A\\d{14}_interpolated(_wgs84)?\\.tif$",
+      full.names = TRUE,
+      ignore.case = TRUE
+    )
+    for (f in ked_files) {
+      b <- basename(f)
+      key <- sub("_interpolated(_wgs84)?\\.tif$", "", b, ignore.case = TRUE)
+      ts <- .viewer_timestamp_from_key(key)
+      if (!is.na(ts)) {
+        rows[[length(rows) + 1]] <- data.frame(
+          family = "ked_timeseries",
+          method = "KED",
+          timestamp = ts,
+          scale = NA_character_,
+          file = normalizePath(f, winslash = "/", mustWork = FALSE),
+          label = sprintf("KED time series @ %s", ts),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+    
+    method_files <- list.files(method_dir, pattern = "\\.tif$", full.names = TRUE, ignore.case = TRUE)
+    rx <- "^([A-Za-z]+)_(\\d{4}-\\d{2}-\\d{2})[-_](\\d{2})[-_](\\d{2})_(Rstar|L95)\\.tif$"
+    for (f in method_files) {
+      b <- basename(f)
+      m <- regexec(rx, b, ignore.case = TRUE)
+      parts <- regmatches(b, m)[[1]]
+      if (length(parts) == 6) {
+        method <- .viewer_method_label(parts[2])
+        ts <- sprintf("%s %s:%s", parts[3], parts[4], parts[5])
+        scale <- if (tolower(parts[6]) == "rstar") "Rstar" else "L95"
+        rows[[length(rows) + 1]] <- data.frame(
+          family = "method_compare",
+          method = method,
+          timestamp = ts,
+          scale = scale,
+          file = normalizePath(f, winslash = "/", mustWork = FALSE),
+          label = sprintf("%s %s @ %s", method, scale, ts),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+    
+    if (!length(rows)) return(empty)
+    reg <- do.call(rbind, rows)
+    method_order <- c("KED", "OK", "IDW", "GAM", "RF", "Voronoi", "Trend")
+    reg$.family_order <- match(reg$family, c("ked_timeseries", "method_compare"))
+    reg$.method_order <- match(reg$method, method_order)
+    reg$.method_order[is.na(reg$.method_order)] <- length(method_order) + 1L
+    reg$.scale_order <- match(reg$scale, c("Rstar", "L95"))
+    reg$.scale_order[is.na(reg$.scale_order)] <- 0L
+    reg <- reg[order(reg$.family_order, reg$timestamp, reg$.scale_order, reg$.method_order, reg$file), ]
+    reg$.family_order <- reg$.method_order <- reg$.scale_order <- NULL
+    rownames(reg) <- NULL
+    reg
+  }
+  
   run_mc_viewer <- function(
       vars,
       method_dir,
@@ -1939,6 +2343,7 @@
       tune = NULL, tune_ex = NULL,
       bench = NULL, bench_ex = NULL,
       tab_err = NULL, tab_err_ex = NULL,
+      scale_diagnostic = NULL,
       explanations = NULL
   ) {
     stopifnot(length(vars) >= 1)
@@ -1949,137 +2354,217 @@
       explanations <- list()
     }
     
-    # erwarteter TIFF-Pfad
-    # erwartet: <method>_<stamp>.tif
-    # erwartet: <method>_<stamp>.tif in method_dir/
-    # Fallback: <ts>_interpolated.tif in der Elternmappe von method_dir (== out_dir)
-    # --- Drop-in: robustes Datei-Matching mit _Rstar/_L95-Präferenz --------------
-    raster_path <- function(method, ts) {
-      stopifnot(length(method) == 1, length(ts) == 1)
-      m <- tolower(method)
-      
-      # Tokens aus dem Timestamp (nutzt deine pretty_time-Logik)
-      .ts_tokens <- function(ts_key) {
-        raw <- tolower(as.character(ts_key))                       # "A20230829120000"
-        pty <- tolower(pretty_time(ts_key))                        # "2023-08-29 12:00"
-        slug_pt <- gsub("[^0-9A-Za-z_-]+","-", pty)                # "2023-08-29-12-00"
-        d14 <- sub("^a", "", raw)                                  # "20230829120000" / "20230829"
-        ymd  <- if (nchar(d14) >= 8) substr(d14,1,8) else NA_character_
-        hhmm <- if (nchar(d14) >= 12) substr(d14,9,12) else NA_character_
-        comp1 <- if (!is.na(ymd) && !is.na(hhmm))
-          paste0(substr(ymd,1,4),"-",substr(ymd,5,6),"-",substr(ymd,7,8),"-",
-                 substr(hhmm,1,2),"-",substr(hhmm,3,4)) else NA_character_
-        comp2 <- gsub("-", "", comp1)                               # "202308291200"
-        ymd_dash <- if (!is.na(ymd)) paste0(substr(ymd,1,4),"-",substr(ymd,5,6),"-",substr(ymd,7,8)) else NA_character_
-        unique(na.omit(c(raw, slug_pt, comp1, comp2, ymd_dash, ymd)))
+    product_registry <- build_raster_product_registry(
+      out_dir = dirname(method_dir),
+      method_dir = method_dir
+    )
+    active_family <- "method_compare"
+    method_registry <- product_registry[product_registry$family == active_family, , drop = FALSE]
+    method_products_available <- nrow(method_registry) > 0L
+    all_methods <- unique(stats::na.omit(as.character(method_registry$method)))
+    nonempty_choices <- function(x, empty_label = "No products available") {
+      x <- unique(stats::na.omit(as.character(x)))
+      if (!length(x)) {
+        stats::setNames("__none__", empty_label)
+      } else {
+        stats::setNames(x, x)
       }
-      toks <- .ts_tokens(ts)
-      tok_rx <- gsub("[-_]", "[-_]", toks)  # Trennertoleranz
-      
-      # 1) methodenspezifische Dateien in method_dir sammeln
-      all_files <- list.files(method_dir, pattern = "\\.tif$", full.names = TRUE, ignore.case = TRUE)
-      if (!length(all_files)) return(NA_character_)
-      b <- tolower(basename(all_files))
-      
-      # nur Dateien mit Präfix "<method>_"
-      keep_pref <- grepl(paste0("^", m, "_"), b)
-      files_m <- all_files[keep_pref]; b_m <- b[keep_pref]
-      if (length(files_m)) {
-        # Scoring: längster passender Token im Dateinamen → höherer Score
-        score <- vapply(seq_along(b_m), function(i) {
-          max(c(0, vapply(tok_rx, function(rx) if (grepl(rx, b_m[i], perl = TRUE)) nchar(rx) else 0L, integer(1))))
-        }, numeric(1))
-        
-        if (any(score > 0)) {
-          best <- files_m[score == max(score)]
-          # Präferenz: *_Rstar.tif vor *_L95.tif (bei gleichem Score)
-          bbest <- tolower(basename(best))
-          idxR <- grep("_rstar\\.tif$", bbest)
-          if (length(idxR)) return(best[idxR[1]])
-          idxL <- grep("_l95\\.tif$", bbest)
-          if (length(idxL)) return(best[idxL[1]])
-          return(best[1])
-        }
-      }
-      
-      # 2) Fallback NUR für KED: Preview <ts>_interpolated.tif in out_dir
-      if (toupper(method) %in% c("KED","PREVIEW")) {
-        out_dir <- dirname(method_dir)
-        prev <- list.files(out_dir, pattern = "\\.tif$", full.names = TRUE, ignore.case = TRUE)
-        if (length(prev)) {
-          bp <- tolower(basename(prev))
-          rx_prev <- paste0("^(", paste0(tok_rx, collapse = "|"), ")_interpolated(_wgs84)?\\.tif$")
-          hit <- grepl(rx_prev, bp, perl = TRUE)
-          if (any(hit)) return(prev[which(hit)[1]])
-        }
-      }
-      
-      NA_character_
     }
     
+    initial_family <- active_family
+    initial_registry <- method_registry
+    initial_methods <- unique(stats::na.omit(as.character(initial_registry$method)))
+    initial_methods <- all_methods[all_methods %in% initial_methods]
+    initial_method_choices <- nonempty_choices(initial_methods)
+    initial_method <- unname(initial_method_choices[1])
     
+    initial_ts_registry <- initial_registry[initial_registry$method == initial_method, , drop = FALSE]
+    initial_timestamps <- sort(unique(stats::na.omit(as.character(initial_ts_registry$timestamp))))
+    initial_ts_choices <- nonempty_choices(initial_timestamps)
+    initial_ts <- unname(initial_ts_choices[1])
     
-    all_methods <- c("KED","OK","IDW","GAM","RF","Voronoi","Trend")
-    # Prüfe über alle timestamps, ob es mind. 1 Datei pro Methode gibt
-    present <- all_methods[vapply(
-      all_methods,
-      function(m) any(file.exists(sapply(vars, function(v) raster_path(m, v)))),
-      logical(1)
-    )]
-    if (!length(present)) present <- all_methods
+    initial_scale_registry <- initial_ts_registry[initial_ts_registry$timestamp == initial_ts, , drop = FALSE]
+    initial_scales <- unique(stats::na.omit(as.character(initial_scale_registry$scale)))
+    initial_scale_choices <- nonempty_choices(initial_scales)
+    initial_scale <- unname(initial_scale_choices[1])
+    
+    message("Initial viewer choices:")
+    print(list(
+      family = initial_family,
+      methods = names(initial_method_choices),
+      timestamps = names(initial_ts_choices),
+      scales = names(initial_scale_choices)
+    ))
+    
+    scale_report_data <- function() {
+      first_finite <- function(x) {
+        x <- suppressWarnings(as.numeric(x))
+        x <- x[is.finite(x)]
+        if (length(x)) x[1] else NA_real_
+      }
+      fmt_m <- function(x) {
+        if (is.finite(x)) sprintf("%.1f m", x) else "not available"
+      }
+      diag_field <- function(x, field) {
+        if (is.null(x)) return(NA_character_)
+        if (is.data.frame(x) && field %in% names(x) && nrow(x) > 0) {
+          return(as.character(x[[field]][1]))
+        }
+        if (is.list(x) && !is.null(x[[field]])) {
+          return(as.character(x[[field]][1]))
+        }
+        NA_character_
+      }
+      
+      rstar <- if (is.list(tune)) first_finite(tune$R_star) else NA_real_
+      l95 <- NA_real_
+      if (is.list(wf) && !is.null(wf$L)) {
+        ls <- try(get_Ls(wf$L), silent = TRUE)
+        if (!inherits(ls, "try-error")) {
+          l95 <- first_finite(c(ls$L95m, ls$L95e))
+        }
+      }
+      
+      diag <- scale_diagnostic
+      if (is.null(diag) && is.list(wf)) {
+        diag <- wf$scale_diagnostic %||% wf$terrain_scale
+      }
+      status <- diag_field(diag, "status")
+      status_label <- if (identical(status, "range_supported")) {
+        "resolved/supported"
+      } else if (identical(status, "range_unresolved_beyond_observation_window")) {
+        "unresolved"
+      } else if (!is.na(status) && nzchar(status)) {
+        status
+      } else {
+        "not recorded"
+      }
+      
+      list(
+        available = is.finite(rstar) || is.finite(l95) || (!is.na(status) && nzchar(status)),
+        rstar = fmt_m(rstar),
+        l95 = fmt_m(l95),
+        status = status_label,
+        interpretation = "Rstar and L95 are diagnostic scale labels. They are not used as raster resolution and do not change the prediction template. All method-comparison rasters are predicted on the same stable DEM-scale support. If a fitted range or L95 lies outside the station network or model-domain support, it is not interpreted as a terrain, microrelief, or process scale. In that case the maps remain local interpolation products, while the scale estimate is unresolved."
+      )
+    }
     
     # Vektoren in WGS84 für Leaflet (ohne Z/M)
     area_ll     <- sf::st_transform(sf::st_zm(plot_area,    drop = TRUE, what = "ZM"), 4326)
     stations_ll <- sf::st_transform(sf::st_zm(stations_pos, drop = TRUE, what = "ZM"), 4326)
     
-    ts_choices <- stats::setNames(vars, pretty_time(vars))
-    
     ui <- shiny::fluidPage(
-      tags$head(tags$style(HTML("#map{height:70vh} .dt-caption{caption-side:top;font-weight:600;margin-bottom:.5em}"))),
+      tags$head(tags$style(HTML("
+        .mc-viewer-layout {
+          display: flex;
+          gap: 12px;
+          align-items: stretch;
+          width: 100%;
+        }
+        .mc-viewer-sidebar {
+          flex: 0 0 320px;
+          max-width: 320px;
+          padding: 8px 10px 8px 0;
+          max-height: calc(100vh - 75px);
+          overflow-y: auto;
+          border-right: 1px solid #ddd;
+        }
+        .mc-viewer-main {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+        .mc-viewer-sidebar .form-group {
+          margin-bottom: 8px;
+        }
+        .mc-viewer-sidebar hr {
+          margin: 10px 0;
+        }
+        #map {
+          height: calc(100vh - 90px) !important;
+          width: 100%;
+        }
+        .leaflet-control.legend,
+        .leaflet-control .legend,
+        .info.legend {
+          max-height: 55vh;
+          overflow-y: auto;
+          max-width: 180px;
+          font-size: 11px;
+          line-height: 1.15;
+        }
+        .info.legend i {
+          width: 12px;
+          height: 12px;
+        }
+        .dt-caption {
+          caption-side: top;
+          font-weight: 600;
+          margin-bottom: .5em;
+        }
+        @media (max-width: 900px) {
+          .mc-viewer-layout {
+            display: block;
+          }
+          .mc-viewer-sidebar {
+            max-width: none;
+            width: 100%;
+            max-height: none;
+            border-right: 0;
+            padding-right: 0;
+          }
+        }
+      "))),
       titlePanel("Microclimate Viewer"),
-      sidebarLayout(
-        sidebarPanel(width = 3,
-                     radioButtons("method","Method",choices = present, selected = present[1]),
-                     selectInput("ts","Timestamp", choices = ts_choices, selected = vars[1]),
-                     fluidRow(
-                       column(6, actionButton("prev","⟵ Prev", width="100%")),
-                       column(6, actionButton("nextbtn","Next ⟶", width="100%"))
-                     ),
-                     # ---- Kontrastwahl -----------------------------------------------------
-                     selectInput(
-                       "stretch", "Contrast",
-                       choices = c(
-                         "Histogram equalized"           = "histeq",
-                         "Quantiles (9 bins)"            = "quant9",
-                         "Linear robust (2–98%)"         = "lin_robust",
-                         "Linear (layer range)"          = "lin_local",
-                         "Linear (global per timestamp)" = "lin_global"
-                       ),
-                       selected = "histeq"
-                     ),
-                     hr(),
-                     h5("Figures"),
-                     selectInput("which_fig","Choose figure",
-                                 choices = names(explanations), selected = if (length(explanations)) names(explanations)[1] else NULL),
-                     uiOutput("fig_link"),
-                     verbatimTextOutput("fig_desc")
+      tags$div(
+        class = "mc-viewer-layout",
+        tags$div(
+          class = "mc-viewer-sidebar",
+          uiOutput("product_availability"),
+          selectInput("scale", "Scale", choices = initial_scale_choices, selected = initial_scale),
+          selectInput("ts","Timestamp", choices = initial_ts_choices, selected = initial_ts),
+          radioButtons("method","Method", choices = initial_method_choices, selected = initial_method),
+          uiOutput("scale_interpretation"),
+          fluidRow(
+            column(6, actionButton("prev","⟵ Prev", width="100%")),
+            column(6, actionButton("nextbtn","Next ⟶", width="100%"))
+          ),
+          # ---- Kontrastwahl -----------------------------------------------------
+          selectInput(
+            "stretch", "Contrast",
+            choices = c(
+              "Histogram equalized"           = "histeq",
+              "Quantiles (9 bins)"            = "quant9",
+              "Linear robust (2–98%)"         = "lin_robust",
+              "Linear (layer range)"          = "lin_local",
+              "Linear (global per timestamp)" = "lin_global"
+            ),
+            selected = "histeq"
+          ),
+          checkboxInput("show_legend", "Show legend", value = FALSE),
+          hr(),
+          h5("Figures"),
+          selectInput("which_fig","Choose figure",
+                      choices = names(explanations), selected = if (length(explanations)) names(explanations)[1] else NULL),
+          uiOutput("fig_link"),
+          verbatimTextOutput("fig_desc")
         ),
-        mainPanel(width = 9,
-                  tabsetPanel(
-                    tabPanel("Map", leafletOutput("map"), br(), htmlOutput("map_explain")),
-                    tabPanel("Tuning & Scales",
-                             fluidRow(column(6, plotOutput("u_plot")), column(6, plotOutput("u_plot_ex"))),
-                             hr(), h4("Scales & radii"), tableOutput("scale_tbl")
-                    ),
-                    tabPanel("Benchmarks",
-                             h4("No extras"), DTOutput("bench_tbl"),
-                             hr(), h4("With extras"), DTOutput("bench_tbl_ex")
-                    ),
-                    tabPanel("Error budget",
-                             h4("No extras"), DTOutput("err_tbl"),
-                             hr(), h4("With extras"), DTOutput("err_tbl_ex")
-                    )
-                  )
+        tags$div(
+          class = "mc-viewer-main",
+          tabsetPanel(
+            tabPanel("Map", leafletOutput("map", width = "100%", height = "calc(100vh - 90px)"), br(), htmlOutput("map_explain")),
+            tabPanel("Tuning & Scales",
+                     fluidRow(column(6, plotOutput("u_plot")), column(6, plotOutput("u_plot_ex"))),
+                     hr(), h4("Scales & radii"), tableOutput("scale_tbl")
+            ),
+            tabPanel("Benchmarks",
+                     h4("No extras"), DTOutput("bench_tbl"),
+                     hr(), h4("With extras"), DTOutput("bench_tbl_ex")
+            ),
+            tabPanel("Error budget",
+                     h4("No extras"), DTOutput("err_tbl"),
+                     hr(), h4("With extras"), DTOutput("err_tbl_ex")
+            )
+          )
         )
       )
     )
@@ -2160,13 +2645,87 @@
     
     
     server <- function(input, output, session) {
-      # Globale Domäne pro Timestamp (falls mehrere Methoden existieren)
+      output$product_availability <- renderUI({
+        if (isTRUE(method_products_available)) return(NULL)
+        tags$div(
+          style = "border:1px solid #ddd; border-radius:6px; padding:8px; margin:8px 0; background:#fff7f7;",
+          tags$strong("No all-method time-series products available.")
+        )
+      })
+      
+      output$scale_interpretation <- renderUI({
+        info <- scale_report_data()
+        if (!isTRUE(info$available)) {
+          return(tags$div(
+            style = "border:1px solid #ddd; border-radius:6px; padding:8px; margin:8px 0; background:#fafafa;",
+            tags$strong("Scale diagnostics"),
+            tags$p("Scale diagnostics not available for this run.")
+          ))
+        }
+        tags$div(
+          style = "border:1px solid #ddd; border-radius:6px; padding:8px; margin:8px 0; background:#fafafa;",
+          tags$strong("Scale diagnostics"),
+          tags$div(tags$b("Rstar: "), info$rstar),
+          tags$div(tags$b("L95: "), info$l95),
+          tags$div(tags$b("Status: "), info$status),
+          tags$p(info$interpretation)
+        )
+      })
+      
+      products_for_mode <- reactive({
+        reg <- method_registry
+        sc <- input$scale %||% initial_scale
+        reg <- reg[reg$scale == sc, , drop = FALSE]
+        reg
+      })
+      
+      timestamp_choices_for_mode <- reactive({
+        reg <- products_for_mode()
+        sort(unique(reg$timestamp))
+      })
+      
+      observeEvent(input$scale, {
+        ts <- timestamp_choices_for_mode()
+        selected <- if (!is.null(input$ts) && input$ts %in% ts) input$ts else if (length(ts)) ts[1] else character(0)
+        updateSelectInput(session, "ts", choices = stats::setNames(ts, ts), selected = selected)
+      }, ignoreInit = FALSE)
+      
+      observeEvent(list(input$scale, input$ts), {
+        reg <- products_for_mode()
+        if (!is.null(input$ts) && nzchar(input$ts)) {
+          reg <- reg[reg$timestamp == input$ts, , drop = FALSE]
+        }
+        methods <- unique(reg$method)
+        methods <- all_methods[all_methods %in% methods]
+        selected <- if (!is.null(input$method) && input$method %in% methods) input$method else if (length(methods)) methods[1] else character(0)
+        updateRadioButtons(session, "method", choices = methods, selected = selected)
+      }, ignoreInit = FALSE)
+      
+      selected_product <- reactive({
+        fam <- active_family
+        ts <- input$ts %||% ""
+        method <- input$method %||% ""
+        if (!nzchar(ts) || !nzchar(method) || identical(ts, "__none__") || identical(method, "__none__")) return(NULL)
+        reg <- products_for_mode()
+        reg <- reg[
+          reg$family == fam &
+            reg$timestamp == ts &
+            reg$method == method,
+          , drop = FALSE
+        ]
+        reg <- reg[reg$scale == (input$scale %||% initial_scale), , drop = FALSE]
+        if (nrow(reg) != 1L) return(NULL)
+        reg[1, , drop = FALSE]
+      })
+      
+      # Global domain for the exact selected product family/timestamp/scale.
       domain_for_ts <- reactive({
         req(input$ts)
-        rngs <- lapply(all_methods, function(m){
-          fp <- raster_path(m, input$ts)
+        reg <- products_for_mode()
+        reg <- reg[reg$timestamp == input$ts, , drop = FALSE]
+        rngs <- lapply(reg$file, function(fp) {
           if (!file.exists(fp)) return(NULL)
-          r  <- try(terra::rast(fp), silent = TRUE)
+          r <- try(terra::rast(fp), silent = TRUE)
           if (inherits(r, "try-error")) return(NULL)
           as.numeric(terra::minmax(r))
         })
@@ -2242,9 +2801,9 @@
         } else res
       }
       
-      refresh_map <- function(method, ts_key) {
-        f  <- raster_path(method, ts_key)
+      refresh_map <- function(product) {
         lp <- leafletProxy("map")
+        product_scale <- input$scale %||% initial_scale
         
         # boundary + stations
         lp <- lp |>
@@ -2256,18 +2815,47 @@
                            color = "black", stroke = TRUE, weight = 1, group = "Stations",
                            options = pathOptions(pane = "vectors"))
         
-        if (!file.exists(f)) {
+        if (is.null(product) || !nrow(product)) {
           lp <- lp |> clearImages() |> clearControls()
+          msg <- if (isTRUE(method_products_available)) {
+            sprintf(
+              "<b>No product available</b><br>%s%s%s<br>Missing files may mean that the product was not computed for this timestamp, method, or scale.",
+              if (!is.null(input$method) && nzchar(input$method)) htmltools::htmlEscape(input$method) else "",
+              if (!is.null(input$ts) && nzchar(input$ts)) paste0(" / ", htmltools::htmlEscape(input$ts)) else "",
+              paste0(" / ", htmltools::htmlEscape(product_scale))
+            )
+          } else {
+            "<b>No all-method time-series products available.</b>"
+          }
           output$map_explain <- renderUI(HTML(
-            sprintf("<b>%s @ %s</b><br><span style='color:#a00'>Missing file:</span> %s",
-                    method, pretty_time(ts_key), htmltools::htmlEscape(basename(f)))
+            msg
           ))
           bb <- sf::st_bbox(area_ll)
           leaflet::fitBounds(lp, bb["xmin"], bb["ymin"], bb["xmax"], bb["ymax"])
           return(invisible(NULL))
         }
         
-        sel_method <- method
+        f <- product$file[1]
+        sel_method <- product$method[1]
+        sel_ts <- product$timestamp[1]
+        sel_family <- product$family[1]
+        sel_scale <- product$scale[1]
+        
+        if (!file.exists(f)) {
+          lp <- lp |> clearImages() |> clearControls()
+          output$map_explain <- renderUI(HTML(
+            sprintf(
+              "<b>No product available</b><br>%s @ %s%s<br><span style='color:#a00'>Missing indexed file:</span> %s",
+              htmltools::htmlEscape(sel_method),
+              htmltools::htmlEscape(sel_ts),
+              if (!is.na(sel_scale)) paste0(" / ", htmltools::htmlEscape(sel_scale)) else "",
+              htmltools::htmlEscape(basename(f))
+            )
+          ))
+          bb <- sf::st_bbox(area_ll)
+          leaflet::fitBounds(lp, bb["xmin"], bb["ymin"], bb["xmax"], bb["ymax"])
+          return(invisible(NULL))
+        }
         
         # ---- detail-schonendes Reproject → EPSG:3857 ---------------------------
         r_spat  <- terra::rast(f)
@@ -2298,7 +2886,7 @@
             lp <- lp |> clearImages() |> clearControls()
             output$map_explain <- renderUI(HTML(
               sprintf("<b>%s @ %s</b><br><span style='color:#a00'>All values are NA.</span>",
-                      sel_method, pretty_time(ts_key))
+                      sel_method, sel_ts)
             ))
             # trotzdem auf Boundary zoomen, damit die Karte nicht „leer grau“ wirkt
             bb <- sf::st_bbox(area_ll)
@@ -2336,9 +2924,12 @@
           leaflet::addRasterImage(rr, colors=pal, opacity=0.85, project=FALSE, group="Layer",
                                   options = leaflet::tileOptions(pane="raster"))
         
-        lp <- .safe_addLegend(lp, pal, leg_values,
-                              paste(sel_method, pretty_time(ts_key),
-                                    if (!is.null(legend_note)) paste0(" • ", legend_note) else ""))
+        if (isTRUE(input$show_legend)) {
+          lp <- .safe_addLegend(lp, pal, leg_values,
+                                paste(sel_method, sel_ts,
+                                      if (!is.na(sel_scale)) paste0(" • ", sel_scale) else "",
+                                      if (!is.null(legend_note)) paste0(" • ", legend_note) else ""))
+        }
         
         lp <- lp |>
           leaflet::addLayersControl(
@@ -2351,7 +2942,9 @@
         lp <- zoom_to_raster(lp, r_3857)
         
         output$map_explain <- renderUI(HTML(paste0(
-          "<b>Layer:</b> ", sel_method, " @ ", pretty_time(ts_key),
+          "<b>Layer:</b> ", htmltools::htmlEscape(sel_method), " @ ", htmltools::htmlEscape(sel_ts),
+          if (!is.na(sel_scale)) paste0(" / ", htmltools::htmlEscape(sel_scale)) else "",
+          "<br><b>Product family:</b> ", htmltools::htmlEscape(sel_family),
           "<br><b>File:</b> ", htmltools::htmlEscape(basename(f)),
           sprintf("<br><b>Legend stretch:</b> %s", mode)
         )))
@@ -2359,22 +2952,26 @@
       }
       
       # initial & reactive
-      observe({ refresh_map(input$method %||% present[1], input$ts %||% vars[1]) })
-      observeEvent(list(input$method, input$ts, input$stretch), {
-        refresh_map(input$method, input$ts)
+      observe({ refresh_map(selected_product()) })
+      observeEvent(list(input$scale, input$method, input$ts, input$stretch, input$show_legend), {
+        refresh_map(selected_product())
       }, ignoreInit = TRUE)
       
       # Prev/Next
       observeEvent(input$prev, {
-        cur <- isolate(input$ts); i <- match(cur, vars); if (is.na(i)) i <- 1
-        i2 <- if (i == 1) length(vars) else i - 1
-        updateSelectInput(session, "ts", selected = vars[i2])
+        ts <- timestamp_choices_for_mode()
+        if (!length(ts)) return()
+        cur <- isolate(input$ts); i <- match(cur, ts); if (is.na(i)) i <- 1
+        i2 <- if (i == 1) length(ts) else i - 1
+        updateSelectInput(session, "ts", selected = ts[i2])
       }, ignoreInit = TRUE)
       
       observeEvent(input$nextbtn, {
-        cur <- isolate(input$ts); i <- match(cur, vars); if (is.na(i)) i <- 1
-        i2 <- if (i == length(vars)) 1 else i + 1
-        updateSelectInput(session, "ts", selected = vars[i2])
+        ts <- timestamp_choices_for_mode()
+        if (!length(ts)) return()
+        cur <- isolate(input$ts); i <- match(cur, ts); if (is.na(i)) i <- 1
+        i2 <- if (i == length(ts)) 1 else i + 1
+        updateSelectInput(session, "ts", selected = ts[i2])
       }, ignoreInit = TRUE)
       
       # Tuning-Plots

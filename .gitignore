@@ -24,3 +24,5 @@ block5/data_2024/interpolated/
 # local large input data, external or LFS later
 block5/data_2024/dgm/
 block5/data/dgm/
+
+**/*.quarto_ipynb
