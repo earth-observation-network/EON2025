@@ -3,20 +3,27 @@ title: "Ecowitt Air Temperature — End-to-End applied Workflow"
 subtitle: "EON Summer School 2025"
 author: Chris Reudenbach, Philipps University Marburg (PUM)
 date: "2025-08-30"
+#title-block-banner: ../images/mc4.png
+#title-block-banner-color: black
+image: ../images/mc4.png
+about:
+  id: image-heading
+  template: marquee
+  image-width: 50em
+
 format:
   html:
-    theme: cosmo
     toc: true
-    toc-depth: 3
-    number-sections: true
-    code-fold: false
+    toc-depth: 2
+    number-sections: false
+    code-fold: true
     code-tools: true
 execute:
   warning: true
   message: true
   echo: true
   cache: false
-editor: visual
+
 ---
 
 # Overview
@@ -173,7 +180,8 @@ wd <- rprojroot::find_rstudio_root_file()
 
 source(file.path(wd, "block4_5/all_functions_1.R"))   # consolidated toolkit
 
-fn_DTM        <- file.path(wd, "block4_5/data_2024/copernicus_DEM.tif")
+#fn_DTM        <- file.path(wd, "block4_5/data_2024/copernicus_DEM.tif")
+fn_DTM        <- file.path(wd, "block4_5/data_2024/DEM.tif")
 fn_stations   <- file.path(wd, "block4_5/data_2024/stations_prelim_modifiziert.gpkg")
 fn_area       <- file.path(wd, "block4_5/data_2024/plot.shp")
 fn_temp_FC29  <- file.path(wd, "block4_5/data_2024/all_GW1000A-WIFIFC29.xlsx")
@@ -196,7 +204,7 @@ sf_crs_utm33 <- sf::st_crs(epsg)
 ```{r}
 #| label: dem-and-areas
 # DEMs
-DEM_scale  <- terra::rast("data_2024/DEM.tif") |> terra::project(epsg)
+DEM_scale  <- terra::rast(fn_DTM) |> terra::project(epsg)
 DEM_scale  <- terra::aggregate(DEM_scale, c(20, 20))  # coarsen ~20–25 m (as in your working code)
 names(DEM_scale) <- "altitude"
 DEM_render <- DEM_scale |> terra::aggregate(fact = c(10, 10))  # for rendering products

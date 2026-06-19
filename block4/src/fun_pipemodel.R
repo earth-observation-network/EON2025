@@ -4,7 +4,7 @@
 # ========================= I/O helpers (tables & plots) ======================
 
 
-# ---- Export-Helper (einfügen NACH out_dir/fig_dir/tab_dir/ras_dir) ----
+# ---- Export-Helper  ----
 fn_fig <- function(stem, ext = "png") file.path(fig_dir, sprintf("%s.%s", stem, ext))
 fn_ras <- function(stem, ext = "tif") file.path(ras_dir, sprintf("%s.%s", stem, ext))
 

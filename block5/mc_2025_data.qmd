@@ -35,3 +35,10 @@ about:
       text: 2025 Position data (climate stations)
       href: https://github.com/earth-observation-network/EON2025/blob/main/block4_5/data/Mikroklima_Stationen_EON25.gpkg
 ---
+
+## Tutorial Data
+
+Download the
+[exercises repository](https://next.hessenbox.de/index.php/s/c749MW3esYBqgTQ)
+(as a ZIP), then unpack it locally. Open the `.Rproj` in **RStudio** and start
+with the provided exercises.
