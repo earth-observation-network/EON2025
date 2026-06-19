@@ -1,4 +1,4 @@
-# EON Summer School 2025
+# EON Summer School 2026
 
 ## Editing the main website
 
