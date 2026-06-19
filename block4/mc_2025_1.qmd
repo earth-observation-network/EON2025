@@ -1,8 +1,8 @@
 ---
 title: "PipeModel Idealized valley microclimate sandbox "
-subtitle: "EON Summer School 2025"
+subtitle: "EON Summer School 2026"
 author: Chris Reudenbach, Philipps University Marburg (PUM)
-date: "2025-08-30"
+date: "2026-08-30"
 title-block-banner: ../images/tube-hp.png
 title-block-banner-color: black 
 format:

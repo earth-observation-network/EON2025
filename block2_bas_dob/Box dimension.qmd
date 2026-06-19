@@ -2,7 +2,7 @@
 title: "Measuring Tree/Forest Structural Complexity with (Fractal) Box Dimension $(D_b)$ from 3D Point Clouds"
 author: "Prakash Basnet, [University of Applied Sciences and Arts (HAWK)"
 output: html_document
-date: "2025-08-26"
+date: "2026-08-26"
 ---
 
 # Introduction

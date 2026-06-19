@@ -1,6 +1,6 @@
 ---
 title: "Slides: From discrete observations to spatial statements"
-subtitle: "EON 2025 warmup: gap filling, assumptions, validation, model criticism"
+subtitle: "EON 2026 warmup: gap filling, assumptions, validation, model criticism"
 order: 20
 format:
   revealjs:

@@ -2,7 +2,7 @@
 title: "Machine learning for remote sensing applications"
 subtitle: "Mapping the MarburgOpenForest"
 author: "Hanna Meyer"
-date: "2025"
+date: "2026"
 editor_options: 
   chunk_output_type: console
 ---

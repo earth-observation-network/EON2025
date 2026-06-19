@@ -1,7 +1,7 @@
 ---
 title: ""
 open-graph:
-  description: "EON Summer School 2025 (31.08-05.09.2025)"
+  description: "EON Summer School 2026 (31.08-05.09.2026)"
   image: /images/clausiwood.png
 comments: false
 ---

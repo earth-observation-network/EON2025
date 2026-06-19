@@ -1,8 +1,8 @@
 ---
 title: "Validation of continuous maps using design-based sampling methods"
-subtitle: "Tutorial for the EON Summer School 2025"
+subtitle: "Tutorial for the EON Summer School 2026"
 author: Paul Magdon[University of Applied Sciences and Arts (HAWK), paul.magdon@hawk.de]
-date: "2025-08-26"
+date: "2026-08-26"
 ---
 
 

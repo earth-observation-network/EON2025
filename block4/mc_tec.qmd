@@ -1,8 +1,8 @@
 ---
 title: "Microclimate Sensors & Power-Supply Units"
-subtitle: "Tutorial: EON Summer School 2025"
+subtitle: "Tutorial: EON Summer School 2026"
 author: Chris Reudenbach, Philipps University Marburg (PUM)
-date: "2025-08-30"
+date: "2026-08-30"
 #comments: false
 
 image: ../images/froggit_1.jpg

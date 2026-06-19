@@ -2,7 +2,7 @@
 title: "From discrete observations to spatial statements"
 subtitle: "Workshop Materials and Setup"
 author: "Chris Reudenbach, Philipps University Marburg (PUM)"
-date: "2025-08-30"
+date: "2026-08-30"
 title-block-banner: ../images/swiss-hp.png
 title-block-banner-color: black
 order: 10

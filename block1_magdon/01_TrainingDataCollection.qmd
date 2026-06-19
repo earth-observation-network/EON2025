@@ -1,9 +1,9 @@
 ---
 title: "Collection of training data for remote sensing modelling based on spectral variability
 "
-subtitle: "Tutorial: EON Summer School 2025"
+subtitle: "Tutorial: EON Summer School 2026"
 author: Paul Magdon, University of Applied Sciences and Arts (HAWK)
-date: "2025-08-26"
+date: "2026-08-26"
 editor_options: 
   chunk_output_type: console
 editor: 
