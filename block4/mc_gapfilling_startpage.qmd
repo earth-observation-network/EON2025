@@ -1,0 +1,90 @@
+---
+title: "Setup: From discrete observations to spatial statements"
+subtitle: "Workshop Materials and Setup"
+author: Chris Reudenbach, Philipps University Marburg (PUM)
+date: "2025-08-30"
+title-block-banner: ../images/swiss-hp.png
+title-block-banner-color: black
+order: 10
+format:
+  html:
+    toc: true
+    number-sections: false
+    code-fold: true
+    df-print: paged
+    embed-resources: false
+
+---
+
+
+## Overview
+
+This block uses microclimate measurements as an example for a general geospatial problem:
+
+We rarely observe a complete spatial or spatio-temporal continuum. Instead, we work with discrete observations: measurement points, pixels, samples, segments, training areas, or selected timestamps. Nevertheless, we often need to make spatial statements about continuous areas and temporal situations.
+
+The practical task is to translate incomplete observations into defensible spatial statements.
+
+Microclimate is the demonstrator, not the boundary of the topic. The same logic connects to sampling, UAV and LiDAR workflows, segmentation, regression, classification, interpolation, and validation.
+
+## Slides
+
+The workshop starts with the slide deck.
+
+[Open slides](mc_warmup_live_slides_en.html)
+
+## Project download
+
+The practical work is based on a local R project. Download the project archive, unpack it on your computer, and open the script in RStudio or Positron.
+
+[Download project ZIP](https://github.com/gisma/EON-Obs2SpatState/archive/refs/heads/main.zip)
+
+[Open project repository](https://github.com/gisma/EON-Obs2SpatState)
+
+The project contains prepared data and the two small scripts used at the end of the workshop. It is designed so that the practical work can run locally without turning the course website into a code repository.
+
+## Prerequisites
+
+Participants should have a recent installation of R and RStudio or Positron.
+
+Install the required R packages before the session:
+
+```r
+install.packages(c(
+  "sf",
+  "terra",
+  "gstat",
+  "randomForest"
+))
+```
+
+Depending on the local system, geospatial packages such as `sf` and `terra` may require GDAL, GEOS, and PROJ support.
+
+## Practical structure
+
+The material has two content blocks:
+
+1. **Hands-on with prepared real data**
+   A minimal script shows how point measurements and a DEM become spatial result rasters. One timestamp is selected, station elevations are extracted from the DEM, a valid statement area is defined, and four simple model surfaces are calculated: nearest station, distance decay, elevation trend, and data-driven spatial partitioning.
+
+2. **Model criticism and reality check**
+   The resulting maps and RMSE values are read critically. The central questions are what each map shows, what it claims, which model assumption produced the surface, what leave-one-out cross-validation checks, and why a low RMSE is not proof of a robust spatial surface.
+
+The reality check is part of the second block. The prepared EON data make the hands-on possible, but real projects require work before modelling: sensor checks, timestamp control, handling of missing values, CRS alignment, DEM reference, definition of the valid statement area, documentation, and data provenance. These steps are introduced as conditions for valid spatial statements, not developed into a full cleaning workflow.
+
+## Optional reader
+
+The reader provides the conceptual background for students who want to understand the modelling logic behind the practical workflow.
+
+[Open reader](mc_warmup_reader_en.html)
+
+## Optional technical material
+
+The scripts and prepared data are available in the project repository for participants who want to inspect or rerun the workflow locally.
+
+[Warmup script and project materials](https://github.com/gisma/EON-Obs2SpatState)
+
+## Core message
+
+A spatial result from discrete observations is always a modelled statement. It must fit the data situation, the statement area, the process logic, the validation boundary, and the intended scale of use.
+

@@ -1,0 +1,549 @@
+---
+title: "Slides: From discrete observations to spatial claims"
+subtitle: "A warmup on gap filling, modelling assumptions and simple model criticism"
+order: 20
+format:
+  revealjs:
+    slide-number: true
+    transition: fade
+    incremental: false
+    navigation-mode: vertical
+    controls: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+# Why this warmup?
+
+We almost never observe a complete surface.
+
+We work with partial observations:
+
+```text
+points
+pixels
+samples
+segments
+training areas
+time steps
+```
+
+Still, we make spatial statements about continuous areas.
+
+## Core problem
+
+A map is rarely a direct measurement.
+
+It is usually a controlled translation from discrete observations into a spatial claim.
+
+```text
+discrete observations -> model assumption -> spatial output
+```
+
+Microclimate is used here as an example.
+
+The workflow logic is more general.
+
+# Course connection
+
+This warmup connects several parts of the course.
+
+```text
+Sampling           Which observations do we have?
+Drone / LiDAR      Which spatial structure can we observe?
+Segmentation       Which spatial units do we create?
+Regression         Which patterns can we transfer?
+Classification     Which type occurs where?
+Interpolation      What can we claim between observations?
+Validation         How reliable is the spatial claim?
+```
+
+The focus is not interpolation as a tool.
+
+The focus is spatial modelling under incomplete observation.
+
+# Live goal
+
+A short R script is read and executed during the session.
+
+The workflow makes one step visible:
+
+```text
+point measurements -> spatial result raster
+```
+
+The display is not the main point.
+
+The modelling assumption behind the display is the main point.
+
+## Technical entry point
+
+Open the project:
+
+```text
+harz-warmup.Rproj
+```
+
+Open the script:
+
+```text
+scripts/microclimate_warmup_minimal_kommentiert.R
+```
+
+Download:
+
+[**Download R script**](../scripts/microclimate_warmup_minimal_kommentiert.R){download="microclimate_warmup_minimal_kommentiert.R"}
+
+# Why scripts?
+
+Scripts make spatial analyses reproducible.
+
+They document:
+
+```text
+data
+parameters
+interpretation domain
+model assumption
+result
+```
+
+This matters for large data sets, repeated runs and later corrections.
+
+# Starting point
+
+Measurement stations provide point values.
+
+The research question refers to space.
+
+Between both stands a space-filling operation:
+
+```text
+What is assumed between the measurement points?
+```
+
+## Example context
+
+Microclimate varies over short distances.
+
+Possible controls include:
+
+```text
+elevation
+terrain form
+vegetation
+shade
+surface cover
+cold-air drainage
+```
+
+This exercise deliberately reduces the case to temperature and elevation.
+
+# Required data
+
+The project contains:
+
+```text
+data/climdata.rds
+data/DEM1.tif
+```
+
+`climdata.rds` contains stations and temperature columns.
+
+`DEM1.tif` contains elevation as a raster.
+
+## Code: load data
+
+```r
+library(sf)
+library(terra)
+library(gstat)
+library(randomForest)
+
+m   <- readRDS("data/climdata.rds")
+dem <- rast("data/DEM1.tif")
+names(dem) <- "altitude"
+```
+
+# One time step
+
+The warmup uses one measurement time step:
+
+```text
+A20230830
+```
+
+All result rasters therefore refer to the same measurement situation.
+
+## Code: set target variable
+
+```r
+m$temp <- m[["A20230830"]]
+```
+
+# Spatial reference
+
+Points and raster must use the same CRS.
+
+Otherwise elevation, distance and overlay cannot be interpreted consistently.
+
+## Code: CRS and station elevation
+
+```r
+m <- st_transform(m, crs(dem))
+m$altitude <- terra::extract(dem, terra::vect(m))$altitude
+
+pts <- m[!is.na(m$temp) & !is.na(m$altitude),
+         c("temp", "altitude")]
+```
+
+# Interpretation domain
+
+The results are not produced for the whole DEM.
+
+The valid domain is:
+
+```text
+convex hull of the stations + 20 m buffer
+```
+
+This limits interpretation to the sampled area.
+
+## Code: interpretation domain
+
+```r
+area <- st_sf(
+  geometry = st_buffer(
+    st_convex_hull(st_union(st_geometry(pts))),
+    20
+  )
+)
+
+dem <- crop(dem, vect(area))
+dem <- mask(dem, vect(area))
+names(dem) <- "altitude"
+```
+
+# Prediction grid
+
+The models predict for raster cells.
+
+The DEM is converted into a table:
+
+```text
+cell
+x
+y
+altitude
+```
+
+## Code: raster cells as target locations
+
+```r
+grid <- as.data.frame(dem, xy = TRUE, cells = TRUE, na.rm = FALSE)
+names(grid)[4] <- "altitude"
+grid <- grid[!is.na(grid$altitude), ]
+
+grid_sf <- st_as_sf(
+  grid,
+  coords = c("x", "y"),
+  crs = st_crs(pts),
+  remove = FALSE
+)
+```
+
+# Four model ideas
+
+The same measurements lead to four spatial result rasters.
+
+```text
+Voronoi      nearest station
+IDW          local distance
+LM altitude  elevation relation
+RF warning   data-driven spatial/elevation partition
+```
+
+# Voronoi
+
+Voronoi means:
+
+```text
+nearest station wins
+```
+
+Each raster cell receives the value of its nearest station.
+
+This is transparent, but coarse.
+
+## Code: Voronoi / nearest station
+
+```r
+vor_df <- gstat::idw(
+  temp ~ 1,
+  locations = pts,
+  newdata = grid_sf,
+  nmax = 1
+)
+
+map_vor <- make_map(vor_df$var1.pred, "Voronoi")
+```
+
+# IDW
+
+IDW uses spatial proximity.
+
+```text
+near stations count more than distant stations
+```
+
+With `nmax = 4`, the estimate remains local.
+
+## Code: IDW
+
+```r
+idw_df <- gstat::idw(
+  temp ~ 1,
+  locations = pts,
+  newdata = grid_sf,
+  nmax = 4
+)
+
+map_idw <- make_map(idw_df$var1.pred, "IDW")
+```
+
+# LM altitude
+
+LM altitude uses elevation as predictor.
+
+```text
+temperature is transferred to raster cells through elevation
+```
+
+This is not a neighbourhood model.
+
+## Code: LM altitude
+
+```r
+fit_lm <- lm(temp ~ altitude, data = st_drop_geometry(pts))
+
+map_lm <- predict(dem, fit_lm)
+names(map_lm) <- "LM_altitude"
+```
+
+# RF warning
+
+RF also predicts temperature.
+
+Input variables are:
+
+```text
+x
+y
+altitude
+```
+
+The model can flexibly partition location and elevation.
+
+## Code: RF warning
+
+```r
+xy <- st_coordinates(pts)
+pts$x <- xy[, 1]
+pts$y <- xy[, 2]
+
+fit_rf <- randomForest(
+  temp ~ x + y + altitude,
+  data = st_drop_geometry(pts),
+  ntree = 200
+)
+
+rf_pred <- predict(fit_rf, newdata = grid)
+map_rf <- make_map(rf_pred, "RF_warning")
+```
+
+# Why RF warning?
+
+RF can produce a low error with very few stations.
+
+This does not automatically mean:
+
+```text
+robust microclimatic explanation
+```
+
+It may simply mean:
+
+```text
+good adaptation to this specific point configuration
+```
+
+# Validation
+
+Leave-one-out cross-validation:
+
+```text
+remove one station
+fit the model with the remaining stations
+predict the omitted station
+store the error
+```
+
+## RMSE
+
+$$
+RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(\hat{y}_i - y_i)^2}
+$$
+
+RMSE measures prediction error at station locations.
+
+RMSE does not prove the process validity of the whole result raster.
+
+# Validate LM and RF
+
+LM and RF are checked with a visible loop.
+
+This is intentionally simple to read.
+
+## Code: LOOCV for LM and RF
+
+```r
+rmse_fun <- function(e) sqrt(mean(e * e, na.rm = TRUE))
+
+lm_cv <- rep(NA, nrow(pts))
+rf_cv <- rep(NA, nrow(pts))
+
+for (i in 1:nrow(pts)) {
+  train <- pts[-i, ]
+  test  <- pts[i, ]
+
+  fit_lm_i <- lm(temp ~ altitude, data = st_drop_geometry(train))
+  lm_cv[i] <- predict(fit_lm_i, newdata = st_drop_geometry(test))
+
+  fit_rf_i <- randomForest(
+    temp ~ x + y + altitude,
+    data = st_drop_geometry(train),
+    ntree = 200
+  )
+  rf_cv[i] <- predict(fit_rf_i, newdata = st_drop_geometry(test))
+}
+```
+
+# Validate Voronoi and IDW
+
+For the `gstat` models, `gstat.cv()` performs LOOCV.
+
+Important:
+
+```text
+validation and result generation use the same neighbourhood assumption
+```
+
+## Code: gstat.cv
+
+```r
+vor_model <- gstat(
+  temp ~ 1,
+  locations = pts,
+  nmax = 1,
+  set = list(idp = 2)
+)
+
+idw_model <- gstat(
+  temp ~ 1,
+  locations = pts,
+  nmax = 4,
+  set = list(idp = 2)
+)
+
+vor_cv <- gstat.cv(vor_model, nfold = nrow(pts))
+idw_cv <- gstat.cv(idw_model, nfold = nrow(pts))
+```
+
+# RMSE table
+
+The table is not an automatic method ranking.
+
+It is a starting point for model criticism.
+
+## Code: compute RMSE
+
+```r
+rmse <- data.frame(
+  model = c("LM altitude", "Voronoi", "IDW", "RF warning"),
+  RMSE = c(
+    rmse_fun(pts$temp - lm_cv),
+    rmse_fun(vor_cv$residual),
+    rmse_fun(idw_cv$residual),
+    rmse_fun(pts$temp - rf_cv)
+  )
+)
+
+print(rmse)
+```
+
+# Result display
+
+All result rasters are displayed with the same colour scale.
+
+The measurement points are overlaid.
+
+This shows both the spatial pattern and its measurement support.
+
+## Code: display
+
+```r
+maps <- c(map_vor, map_idw, map_lm, map_rf)
+z <- range(c(pts$temp - 1, pts$temp + 1), na.rm = TRUE)
+
+par(mfrow = c(2, 2))
+
+for (i in 1:nlyr(maps)) {
+  plot(maps[[i]], range = z, main = names(maps)[i])
+  points(pts, pch = 19, cex = 0.8)
+}
+
+par(mfrow = c(1, 1))
+```
+
+# Result logic
+
+```text
+Voronoi      hard station territories
+IDW          local neighbourhood
+LM altitude  elevation relation
+RF warning   data-driven partition
+```
+
+The display is only the surface.
+
+The spatial claim lies in the model assumption.
+
+# Discussion
+
+Guiding questions:
+
+```text
+Which result shows hard station territories?
+Which result shows local distance?
+Which result mainly follows elevation?
+Which result looks good, but remains risky?
+Why is RMSE alone not enough?
+```
+
+# Conclusion
+
+A spatial result does not emerge neutrally from point measurements.
+
+Between observation and claim stand:
+
+```text
+interpretation domain
+model assumption
+predictors
+validation
+process plausibility
+```
+
+The script makes this chain visible in minimal form.
