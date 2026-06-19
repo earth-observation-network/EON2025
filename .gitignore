@@ -8,3 +8,19 @@
 /.quarto/
 
 /.luarc.json
+
+# block5 generated interpolation outputs
+block5/interpolated/
+block5/data_2024/interpolated/
+
+# block5 generated outputs
+block5/interpolated/
+block5/data_2024/interpolated/
+
+# block5 generated outputs
+block5/interpolated/
+block5/data_2024/interpolated/
+
+# local large input data, external or LFS later
+block5/data_2024/dgm/
+block5/data/dgm/
