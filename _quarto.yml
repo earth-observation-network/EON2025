@@ -20,7 +20,6 @@ project:
     - block4/mc_warmup_live_slides_en.qmd
     - block4/mc_warmup_reader_en.qmd
     - block4/mc_data.qmd
-    - block4/mc_tec.qmd    
     - block6/index.qmd
 
  
@@ -71,7 +70,7 @@ website:
         contents:
           - block4/mc_gapfilling_startpage.qmd
           - block4/mc_data.qmd
-          - block4/mc_tec.qmd
+
 
           # - block4/swiss_models_one_legend_bluewhite.html 
           # - block4/mc_2025_1.qmd
